@@ -1,11 +1,16 @@
+import os
+
 import mysql.connector as mysql
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 class DbConnector:
     """
-    Connects to the MySQL server on the Ubuntu virtual machine.
-    Connector needs HOST, DATABASE, USER and PASSWORD to connect,
-    while PORT is optional and should be 3306.
+    Connects to the local MySQL server running in Docker (see docker-compose.yml).
+    Connection settings are read from the .env file (see .env.example),
+    but can also be passed in as arguments.
 
     Example:
     HOST = "tdt4225-00.idi.ntnu.no" // Your server IP address/domain name
@@ -15,13 +20,14 @@ class DbConnector:
     """
 
     def __init__(self,
-                 HOST="tdt4225-xx.idi.ntnu.no",
-                 DATABASE="DATABASE_NAME",
-                 USER="TEST_USER",
-                 PASSWORD="test123"):
+                 HOST=os.getenv("DB_HOST", "localhost"),
+                 DATABASE=os.getenv("DB_NAME"),
+                 USER=os.getenv("DB_USER"),
+                 PASSWORD=os.getenv("DB_PASSWORD"),
+                 PORT=int(os.getenv("DB_PORT", "3306"))):
         # Connect to the database
         try:
-            self.db_connection = mysql.connect(host=HOST, database=DATABASE, user=USER, password=PASSWORD, port=3306)
+            self.db_connection = mysql.connect(host=HOST, database=DATABASE, user=USER, password=PASSWORD, port=PORT)
         except Exception as e:
             print("ERROR: Failed to connect to db:", e)
 
