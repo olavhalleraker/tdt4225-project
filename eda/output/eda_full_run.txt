@@ -1,0 +1,244 @@
+Reading cached polyline statistics from data/trip_stats_full.csv
+
+==============================================================================
+CHECK 1: Rows, columns and empty values
+==============================================================================
+Rows (trips): 1710670
+column          distinct values      empty  empty %
+------------  -----------------  ---------  ---------
+TRIP_ID               1,710,589          0  0.00 %
+CALL_TYPE                     3          0  0.00 %
+ORIGIN_CALL              57,106  1,345,900  78.68 %
+ORIGIN_STAND                 64    904,091  52.85 %
+TAXI_ID                     448          0  0.00 %
+TIMESTAMP             1,655,366          0  0.00 %
+DAY_TYPE                      1          0  0.00 %
+MISSING_DATA                  2          0  0.00 %
+
+-> Only ORIGIN_CALL and ORIGIN_STAND have empty values. They are empty on
+   purpose (they only apply to call type A and B), so they should become NULL.
+
+==============================================================================
+CHECK 2: TRIP_ID format
+==============================================================================
+Example row: TRIP_ID=1372636858620000589  TIMESTAMP=1372636858  TAXI_ID=20000589
+TRIP_ID == TIMESTAMP + TAXI_ID       : 0 rows
+TRIP_ID == TIMESTAMP + '6' + TAXI_ID : 1710670 of 1710670 rows
+Largest TRIP_ID: 1404172796620000657  (BIGINT max is 9223372036854775807)
+
+-> TRIP_ID is just start time + '6' + taxi. Two trips by the same taxi
+   starting in the same second would get the same ID (see check 3).
+
+==============================================================================
+CHECK 3: Duplicate TRIP_IDs
+==============================================================================
+TRIP_IDs that occur more than once: 80
+Rows involved: 161  (= 81 extra rows)
+Copies per ID: {2: 79, 3: 1}
+IDs where all metadata columns are identical: 57 of 80
+IDs where the POLYLINE is identical too    : 3 of 80
+IDs where one copy has an empty POLYLINE   : 7
+
+Example, TRIP_ID 1372702836620000080:
+                  TRIP_ID  CALL_TYPE      TAXI_ID    TIMESTAMP    n_points
+----  -------------------  -----------  ---------  -----------  ----------
+3519  1372702836620000080  B             20000080   1372702836           2
+3720  1372702836620000080  C             20000080   1372702836          54
+
+-> TRIP_ID is NOT unique, and the copies are mostly different trips (not
+   exact copies). Decision: keep the copy with the most GPS points (drops
+   81 rows) and use a surrogate integer key in the database.
+
+==============================================================================
+CHECK 4: CALL_TYPE and ORIGIN_CALL / ORIGIN_STAND consistency
+==============================================================================
+CALL_TYPE       rows  share
+-----------  -------  -------
+A            364,770  21.32 %
+B            817,881  47.81 %
+C            528,019  30.87 %
+
+Rule violations (the assignment says ORIGIN_CALL only for A, ORIGIN_STAND only for B):
+rule                                rows
+--------------------------------  ------
+A (central) without ORIGIN_CALL        0
+ORIGIN_CALL set, but not type A        0
+B (stand) without ORIGIN_STAND     11302
+ORIGIN_STAND set, but not type B       0
+
+-> Rules hold except 11302 B-trips with unknown stand. Kept, with ORIGIN_STAND = NULL.
+
+==============================================================================
+CHECK 5: DAY_TYPE
+==============================================================================
+DAY_TYPE         rows  share
+----------  ---------  --------
+A           1,710,670  100.00 %
+DAY_TYPE values on Christmas Day: ['A']
+
+-> DAY_TYPE is 'A' for every trip, even on Christmas. The column carries no
+   information and cannot be trusted.
+
+==============================================================================
+CHECK 6: MISSING_DATA
+==============================================================================
+MISSING_DATA         rows  share
+--------------  ---------  --------
+False           1,710,660  100.00 %
+True                   10  0.00 %
+
+The flagged trips:
+                     TRIP_ID  CALL_TYPE      n_points    dist_km    n_outside_portugal
+-------  -------------------  -----------  ----------  ---------  --------------------
+ 105621  1374554455620000625  B                    43       4.47                     0
+ 171397  1375863510620000454  B                     1       0.00                     1
+ 299137  1378544246620000057  B                    11      14.66                     0
+ 457486  1381233613620000387  C                   483     107.73                     0
+ 738466  1386346894620000904  C                   285     142.53                     0
+ 782321  1387137779620000640  C                    51       8.13                     0
+ 848552  1388351478620000678  A                    27       3.53                     0
+ 932391  1390005983620000640  C                    14       1.56                     0
+1275934  1396631707620000163  C                     1       0.00                     1
+1432196  1399405185620000508  C                    53      11.62                     0
+
+Trips flagged False, but with a >200 km/h jump (a real gap): 38211
+
+-> Only a handful of trips are flagged, while tens of thousands have real gaps
+   (check 13). The flag is kept as a column but not used for cleaning.
+
+==============================================================================
+CHECK 7: Taxis and trips per taxi
+==============================================================================
+Distinct taxis: 448
+trips per taxi
+----------------  -------
+count               448
+mean               3818.5
+std                1644
+min                   1
+25%                2694
+50%                3732
+75%                5023.2
+max               10746
+Taxis with fewer than 10 trips: 6
+
+-> A few taxis have almost no trips. They are real data and are kept, but they
+   pull 'per taxi' averages down a little.
+
+==============================================================================
+CHECK 8: TIMESTAMP: time range and timezone
+==============================================================================
+First trip: 2013-07-01 01:00:53+01:00  (UTC 2013-07-01 00:00:53+00:00)
+Last trip : 2014-07-01 00:59:56+01:00  (UTC 2014-06-30 23:59:56+00:00)
+
+Share of trips per start-time band (needed for query 4b):
+band    Europe/Lisbon    UTC
+------  ---------------  -------
+00-06   18.35 %          18.35 %
+06-12   27.61 %          28.73 %
+12-18   30.99 %          30.86 %
+18-24   23.04 %          22.05 %
+Trips that land in a different band depending on timezone: 157929
+
+-> Exactly one year of data. The timezone changes the answer to query 4b,
+   so we store local Porto time (Europe/Lisbon) and say so in the report.
+
+==============================================================================
+CHECK 9: GPS points per trip and invalid trips
+==============================================================================
+Total GPS points: 83409386
+trips with                    trips  share
+--------------------------  -------  -------
+0 points (POLYLINE = '[]')     5901  0.34 %
+1 point                       30609  1.79 %
+2 points                       7394  0.43 %
+< 3 points = invalid          43904  2.57 %
+Points per trip: median 41, mean 48.8, max 3881
+
+-> Invalid trips are kept in the trip table (query 7 must count them), and
+   marked with is_valid = 0 so the other queries can skip them.
+
+==============================================================================
+CHECK 10: Trip duration
+==============================================================================
+Duration (valid trips): median 10.2 min, 99th percentile 47.5 min, max 970 min
+duration      trips
+----------  -------
+> 1 h         10094
+> 2 h          2257
+> 3 h           847
+> 4 h           403
+> 8 h            52
+> 12 h            7
+
+-> Most trips are 5-20 minutes. A few hundred run for hours (meter left on?).
+   They are few, so we keep them and mention them in the report.
+
+==============================================================================
+CHECK 11: Trip distance
+==============================================================================
+Distance (valid trips): median 4.03 km, mean 5.65 km, max 1229 km
+distance             trips
+-----------------  -------
+0 m (never moved)       15
+< 100 m               8573
+> 100 km              1319
+> 1000 km                3
+
+-> A 1000 km taxi trip inside ~15 minutes is impossible: those distances
+   come from GPS jumps (check 13), not real driving.
+
+==============================================================================
+CHECK 12: GPS points outside Porto / outside Portugal
+==============================================================================
+outside                                            points    trips
+----------------------------------------------  ---------  -------
+Porto box (-8.8, -8.4, 41.0, 41.35)             1,113,788    7,142
+Mainland Portugal box (-9.6, -6.1, 36.9, 42.2)         38       32
+
+The points outside Portugal reach lon -36.9 .. 52.9 and lat 32.0 .. 51.0
+
+Example: trip 1372846640620000473 has 105 points, of which point(s) [0] are outside Portugal:
+  point 0: [-12.154527, 45.657225]   (neighbours: [-12.154527, 45.657225] ... [-8.579547, 41.185935])
+
+-> Outside the Porto box are mostly real long trips on motorways, so we do NOT
+   cut to Porto. Outside Portugal is certainly wrong: those trips are dropped.
+
+==============================================================================
+CHECK 13: Unrealistic jumps between consecutive points (> 200 km/h)
+==============================================================================
+200 km/h for 15 s = 833 m between two points
+                                 count
+-----------------------------  -------
+jump segments in total           46985
+trips with at least one jump     38216
+trips with a jump > 1000 km/h     3764
+Single-point spikes (each one causes 2 jump segments): 208
+
+Example trip 1372667799620000050, metres between consecutive points:
+  15 147 152 0 4 155 229 172 133 121 18 3 31 60 15 15 10 2 1 28 140 113 6206 111
+  the jump is segment 22: 6207 m in 15 s = 1490 km/h
+
+-> MISSING_DATA misses these gaps. We keep the trips but flag them with
+   has_gap = 1, so distance/hours queries can exclude them.
+
+==============================================================================
+CHECK 14: Coordinate precision
+==============================================================================
+  max decimals in trip       rows  share
+----------------------  ---------  -------
+                     4          2  0.00 %
+                     5        286  0.02 %
+                     6  1,704,481  99.98 %
+
+-> Never more than 6 decimals, so DECIMAL(9,6) stores every value exactly
+   (6 decimals = about 0.1 m). FLOAT would round to about 1 m.
+
+==============================================================================
+CHECK 15: Reference counts for query 6 and 9
+==============================================================================
+Valid trips with start and end within 50 m (query 9): 21472
+Valid trips with a point within 100 m of City Hall (query 6): 126295
+
+-> Computed from the raw CSV (before cleaning), so the SQL answers should be
+   very close to these.
