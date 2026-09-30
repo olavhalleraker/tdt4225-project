@@ -47,7 +47,7 @@
 \newcommand{\screenshot}[2]{%
   \begin{figure}[H]\centering
   \IfFileExists{screenshots/#1.png}%
-    {\includegraphics[width=\linewidth]{screenshots/#1.png}}%
+    {\includegraphics[width=\linewidth,height=0.8\textheight,keepaspectratio]{screenshots/#1.png}}%
     {\fbox{\parbox[c][2.5cm][c]{0.9\linewidth}{\centering\color{gray}
       screenshot missing: screenshots/#1.png}}}%
   \caption{#2}
@@ -265,7 +265,6 @@ only count valid trips). The least active taxi has 1 trip, the most active
 
 \textbf{4a.} B (taxi stand) is the most used call type for 354 taxis, C for 82
 and A for 12. One taxi has as many B as C trips, and we picked B.
-\screenshot{q4a}{Task 4a (first rows).}
 
 \textbf{4b.} Street hails (C) are the longest trips on average and clearly
 dominate at night:
@@ -283,7 +282,7 @@ C (street)  & 13.67 & 6.67 & 31.78\,\% & 24.40\,\% & 24.00\,\% & 19.82\,\%\\
 \end{table}
 Without the trips that have a GPS jump, the average distances are 2--4\,\%
 lower (A 5.34, B 5.01, C 6.40\,km).
-\screenshot{q4b}{Task 4b.}
+\screenshot{q4ab}{Task 4a (first 20 taxis and summary) and task 4b.}
 
 \textbf{5.} Taxi \textbf{20000904} has both the most hours (1,961.0\,h) and
 the longest total distance (62,788\,km). Second on hours is 20000129
