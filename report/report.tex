@@ -1,0 +1,381 @@
+% TDT4225 Assignment 2 - report
+% Follows "Report - template - Assignment 2.docx":
+%   A4, 1 inch margins, Lato, NTNU logo left + TDT4225 right in the header
+%   with a grey rule below, page number centred in the footer,
+%   title 18 pt bold, subtitle 14 pt, headings 14 pt bold, body 12 pt.
+\documentclass[12pt,a4paper]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[default]{lato}
+\usepackage[a4paper,margin=1in,headheight=28pt,headsep=18pt]{geometry}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{float}
+\usepackage{listings}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt}
+\setlist{nosep,leftmargin=*}
+
+% ---- header / footer as in the template ----
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\raisebox{-0.2\height}{\includegraphics[width=3.86cm]{ntnu_logo.png}}}
+\fancyhead[R]{TDT4225}
+\renewcommand{\headrule}{{\color[HTML]{A0A0A0}\hrule height 1.5pt}}
+\fancyfoot[C]{\thepage}
+
+% ---- headings: plain bold 14 pt (Introduction, Results, ...) ----
+\titleformat{\section}{\fontsize{14}{17}\selectfont\bfseries}{}{0pt}{}
+\titleformat{\subsection}{\fontsize{12}{15}\selectfont\bfseries}{}{0pt}{}
+\titlespacing*{\section}{0pt}{18pt}{6pt}
+\titlespacing*{\subsection}{0pt}{12pt}{4pt}
+
+\lstset{basicstyle=\ttfamily\footnotesize,columns=fullflexible,
+        keepspaces=true,frame=single,rulecolor=\color[HTML]{A0A0A0},
+        breaklines=true}
+
+% Screenshot of the console output. Put the PNGs in screenshots/.
+% A missing file shows a grey placeholder box instead of breaking the build.
+\newcommand{\screenshot}[2]{%
+  \begin{figure}[H]\centering
+  \IfFileExists{screenshots/#1.png}%
+    {\includegraphics[width=\linewidth]{screenshots/#1.png}}%
+    {\fbox{\parbox[c][2.5cm][c]{0.9\linewidth}{\centering\color{gray}
+      screenshot missing: screenshots/#1.png}}}%
+  \caption{#2}
+  \end{figure}}
+
+\newcommand{\edafig}[2]{%
+  \begin{figure}[H]\centering
+  \includegraphics[width=0.8\linewidth]{figures/#1.png}
+  \caption{#2}
+  \end{figure}}
+
+\begin{document}
+
+% ---- title block ----
+\vspace*{0pt}
+\begin{center}
+  {\fontsize{18}{22}\selectfont\bfseries Report\par}
+  \vspace{4pt}
+  {\fontsize{14}{17}\selectfont Assignment 2 - MySQL\par}
+\end{center}
+\vspace{12pt}
+
+\textbf{Group}: xx\\
+\textbf{Students}: Ingrid Singstad, Olav Larsen Halleraker
+
+\vspace{12pt}
+
+% =====================================================================
+\section*{Introduction}
+
+In this assignment we worked with the Porto Taxi Trajectory dataset:
+1.7 million taxi trips from July 2013 to June 2014, where each trip has a
+GPS point every 15 seconds. We first explored and cleaned the data, then
+designed a MySQL schema and loaded the cleaned data into it, and finally
+answered ten questions with SQL and Python.
+
+The main problems we had to solve were that TRIP\_ID is not unique, that
+some trips have almost no GPS points or obviously wrong points, and that
+83 million GPS points take a lot of space and time to load.
+
+We started with a group meeting where we went through the assignment and
+agreed on a plan for the EDA, the cleaning, the schema and each query.
+% TODO: describe how you split the work between you.
+MySQL 8.0 ran locally in Docker, and we used Python with
+\texttt{mysql-connector-python}, \texttt{pandas} and \texttt{haversine}.
+
+Repository: \url{https://github.com/olavhalleraker/tdt4225-project}
+
+% =====================================================================
+\section*{Results}
+
+\subsection*{Part 1 -- Exploratory data analysis}
+
+The raw CSV has \textbf{1,710,670 trips}, \textbf{83,409,386 GPS points}
+and \textbf{448 taxis}, covering exactly one year.
+
+\textbf{Metadata.}
+\begin{itemize}
+  \item ORIGIN\_CALL and ORIGIN\_STAND are the only columns with empty values
+        (78.7\,\% and 52.9\,\%). This is expected, since they only apply to
+        call type A and B. 11,302 B trips still have no stand.
+  \item TRIP\_ID is just TIMESTAMP + ``6'' + TAXI\_ID. 80 IDs occur more than
+        once, and in most cases the copies are different trips, typically
+        a short stub next to the real one.
+  \item Call types: A 21.3\,\%, B 47.8\,\%, C 30.9\,\%.
+  \item DAY\_TYPE is ``A'' in every row, and MISSING\_DATA is true for only
+        10 rows. Neither column tells us anything useful.
+  \item TIMESTAMP is in UTC. 157,929 trips end up in a different time band
+        depending on whether we use UTC or Porto time, so we use local Porto
+        time (Europe/Lisbon) everywhere.
+\end{itemize}
+
+\textbf{Trajectories.}
+\begin{itemize}
+  \item Median 41 points per trip. 43,904 trips (2.6\,\%) have fewer than
+        3 points: 5,901 are empty, 30,609 have one point and 7,394 have two.
+  \item Median duration is 10 minutes and median distance 4.0\,km, but the
+        longest trip is 16\,h and the longest distance 1,229\,km.
+  \item 32 trips have points far outside Portugal, as far away as latitude 51
+        and longitude 53. These are GPS errors.
+  \item 38,216 trips have at least one jump of more than 833\,m in 15\,s
+        (above 200\,km/h). Most of them look like a gap in the signal rather
+        than a single bad point, and they explain the extreme distances.
+  \item 7,142 trips leave the Porto area, but these are mostly real trips
+        on the motorway, so we kept them.
+\end{itemize}
+
+\edafig{polyline_points_per_trip}{Number of GPS points per trip.}
+\edafig{metadata_trips_by_hour}{Trips per hour of the day (local time).}
+\edafig{polyline_max_speed}{Highest speed between two consecutive points in each trip.}
+\edafig{polyline_map_hexbin}{Density of GPS points around Porto.}
+
+\textbf{Cleaning.} We removed as little as possible:
+\begin{itemize}
+  \item For duplicate TRIP\_IDs we kept the copy with the most points. The
+        other copies were almost always empty or only a few points long
+        (81 rows removed).
+  \item Trips with a point outside mainland Portugal were removed completely
+        (32 trips). There were so few that repairing them was not worth it.
+  \item Trips with fewer than 3 points are kept, because query 7 has to count
+        them. They get \texttt{is\_valid = 0}, and the other queries filter
+        them out.
+  \item Trips with a GPS jump are kept and marked with \texttt{has\_gap = 1},
+        so distance queries can leave them out.
+  \item Empty ORIGIN\_CALL and ORIGIN\_STAND are stored as NULL.
+\end{itemize}
+After cleaning the database has \textbf{448 taxis, 1,710,557 trips and
+83,408,413 GPS points}. Only 113 rows were removed in total.
+
+\screenshot{eda_output}{EDA output (\texttt{eda/eda.py}).}
+
+\subsection*{Part 1 -- Schema}
+
+We use four tables: \texttt{call\_type}, \texttt{taxi}, \texttt{trip} and
+\texttt{gps\_point}. The most important choices were:
+\begin{itemize}
+  \item \texttt{trip} gets its own integer key, since TRIP\_ID is not unique
+        in the raw data. A 4-byte key also saves about 320\,MB in
+        \texttt{gps\_point}.
+  \item Values we need often (start and end time, duration, distance,
+        number of points, start and end point, bounding box) are computed
+        once when loading. That way only query 6 has to read the 83 million
+        GPS points.
+  \item \texttt{gps\_point} is kept as small as possible: a composite primary
+        key, no timestamp per point (it is \texttt{start\_time + 15 s $\cdot$ seq})
+        and no extra indexes. The whole database is 3.3\,GB.
+\end{itemize}
+
+The loader (\texttt{insert\_data.py}) reads the CSV twice. The first pass
+decides which rows to keep, and the second parses the trips in batches and
+bulk-loads them with \texttt{LOAD DATA LOCAL INFILE}. The full load takes about
+4 minutes. Afterwards we checked that the number of points matches
+\texttt{SUM(n\_points)}, that there are no orphan rows, and that a few
+trips match the CSV exactly.
+
+\begin{lstlisting}[language=SQL]
+CREATE TABLE call_type (
+    code        CHAR(1)      NOT NULL,
+    description VARCHAR(40)  NOT NULL,
+    PRIMARY KEY (code)
+);
+
+CREATE TABLE taxi (
+    taxi_id     INT UNSIGNED NOT NULL,
+    PRIMARY KEY (taxi_id)
+);
+
+CREATE TABLE trip (
+    id            INT UNSIGNED      NOT NULL AUTO_INCREMENT,
+    trip_code     BIGINT UNSIGNED   NOT NULL,
+    taxi_id       INT UNSIGNED      NOT NULL,
+    call_type     CHAR(1)           NOT NULL,
+    origin_call   INT UNSIGNED      NULL,
+    origin_stand  SMALLINT UNSIGNED NULL,
+    day_type      CHAR(1)           NOT NULL,
+    missing_data  BOOLEAN           NOT NULL,
+    start_unix    INT UNSIGNED      NOT NULL,
+    start_time    DATETIME          NOT NULL,
+    end_time      DATETIME          NOT NULL,
+    duration_s    INT UNSIGNED      NOT NULL,
+    n_points      SMALLINT UNSIGNED NOT NULL,
+    is_valid      BOOLEAN AS (n_points >= 3) VIRTUAL,
+    distance_km   DECIMAL(9,3)      NOT NULL,
+    has_gap       BOOLEAN           NOT NULL DEFAULT 0,
+    start_lat     DECIMAL(8,6)      NULL,
+    start_lon     DECIMAL(9,6)      NULL,
+    end_lat       DECIMAL(8,6)      NULL,
+    end_lon       DECIMAL(9,6)      NULL,
+    min_lat       DECIMAL(8,6)      NULL,
+    max_lat       DECIMAL(8,6)      NULL,
+    min_lon       DECIMAL(9,6)      NULL,
+    max_lon       DECIMAL(9,6)      NULL,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_trip_code (trip_code),
+    KEY idx_trip_taxi_start (taxi_id, start_time),
+    KEY idx_trip_call_type (call_type),
+    CONSTRAINT fk_trip_taxi FOREIGN KEY (taxi_id)
+        REFERENCES taxi (taxi_id) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT fk_trip_call_type FOREIGN KEY (call_type)
+        REFERENCES call_type (code) ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT chk_trip_day_type CHECK (day_type IN ('A', 'B', 'C')),
+    CONSTRAINT chk_trip_times    CHECK (end_time >= start_time)
+);
+
+CREATE TABLE gps_point (
+    trip_id  INT UNSIGNED      NOT NULL,
+    seq      SMALLINT UNSIGNED NOT NULL,
+    lat      DECIMAL(8,6)      NOT NULL,
+    lon      DECIMAL(9,6)      NOT NULL,
+    PRIMARY KEY (trip_id, seq),
+    CONSTRAINT fk_gps_point_trip FOREIGN KEY (trip_id)
+        REFERENCES trip (id) ON DELETE CASCADE ON UPDATE CASCADE
+);
+\end{lstlisting}
+
+\subsection*{Part 2 -- Queries}
+
+Q1--Q3 count all trips in the database. From Q4b on we only use valid trips
+(at least 3 points). All times are local Porto time.
+
+\textbf{1.} There are \textbf{448 taxis, 1,710,557 trips and 83,408,413 GPS
+points}. Counting only valid trips, there are 1,666,742 trips with
+83,363,103 points.
+\screenshot{q1}{Task 1.}
+
+\textbf{2.} On average each taxi has \textbf{3,818.2 trips} (3,720.4 if we
+only count valid trips). The least active taxi has 1 trip, the most active
+10,731.
+\screenshot{q2}{Task 2.}
+
+\textbf{3.} Taxi 20000080 has the most trips (10,731), followed by 20000403
+(9,236) and 20000066 (8,443). Number 20 is 20000235 with 6,410 trips.
+61\,\% of the trips of the top taxi have fewer than 3 points.
+\screenshot{q3}{Task 3: the 20 taxis with the most trips.}
+
+\textbf{4a.} B (taxi stand) is the most used call type for 354 taxis, C for 82
+and A for 12. One taxi has as many B as C trips, and we picked B.
+\screenshot{q4a}{Task 4a (first rows).}
+
+\textbf{4b.} Street hails (C) are the longest trips on average and clearly
+dominate at night:
+
+\begin{table}[H]\centering\small
+\begin{tabular}{lrrrrrr}
+\toprule
+Call type & Duration (min) & Distance (km) & 00--06 & 06--12 & 12--18 & 18--24\\
+\midrule
+A (central) & 12.59 & 5.43 & 12.05\,\% & 31.82\,\% & 32.59\,\% & 23.55\,\%\\
+B (stand)   & 11.23 & 5.11 & 13.02\,\% & 27.76\,\% & 34.56\,\% & 24.65\,\%\\
+C (street)  & 13.67 & 6.67 & 31.78\,\% & 24.40\,\% & 24.00\,\% & 19.82\,\%\\
+\bottomrule
+\end{tabular}
+\end{table}
+Without the trips that have a GPS jump, the average distances are 2--4\,\%
+lower (A 5.34, B 5.01, C 6.40\,km).
+\screenshot{q4b}{Task 4b.}
+
+\textbf{5.} Taxi \textbf{20000904} has both the most hours (1,961.0\,h) and
+the longest total distance (62,788\,km). Second on hours is 20000129
+(1,649.6\,h). Second on distance is 20000351 (56,639\,km), which is only
+number 51 on hours.
+\screenshot{q5}{Task 5.}
+
+\textbf{6.} \textbf{126,295} valid trips pass within 100\,m of Porto City
+Hall. This matches what we found directly from the CSV during the EDA.
+\screenshot{q6}{Task 6.}
+
+\textbf{7.} There are \textbf{43,815 invalid trips} (2.56\,\%): 5,894 with no
+points, 30,532 with one and 7,389 with two.
+\screenshot{q7}{Task 7.}
+
+\textbf{8.} \textbf{8,028} trips start on one day and end on the next
+(0.48\,\% of valid trips). None of them crosses more than one midnight.
+\screenshot{q8}{Task 8.}
+
+\textbf{9.} \textbf{21,467} trips start and end within 50\,m of each other.
+7,608 of them hardly move at all (less than 100\,m driven), while 12,177
+drive at least 1\,km before coming back.
+\screenshot{q9}{Task 9.}
+
+\textbf{10.} The two taxis at the top, 20000941 (1,746.6\,h) and 20000969
+(282.1\,h), hardly drove at all during the year. From number 3 (20000312,
+13.1\,h) the averages are between 5 and 13 hours.
+\screenshot{q10}{Task 10: the 20 taxis with the highest average idle time.}
+
+% =====================================================================
+\section*{Discussion}
+
+\textbf{What we did differently.} The assignment does not say which timezone
+to use. We chose local Porto time, because that is when the trips actually
+happened, and it moves about 1\,\% of the trips between time bands in 4b.
+We also could not use TRIP\_ID as the primary key, since it is not unique,
+so \texttt{trip} got its own key.
+
+\textbf{Invalid trips and GPS jumps.} We kept both and marked them instead
+of deleting them. This way query 7 can count the invalid trips, and the
+other queries can choose what to include. The downside is that every query
+has to state which trips it uses. For distances the difference turned out to
+be small, only 2--4\,\% in 4b.
+
+\textbf{The flags in the dataset are not reliable.} DAY\_TYPE is always ``A''
+and MISSING\_DATA marks only 10 trips, while about 38,000 trips clearly have
+gaps. We therefore judged data quality from the trajectories themselves.
+
+\textbf{Rankings per taxi.} Taxis with few or strange trips end up at the top
+of some rankings. The top taxi in Q3 has 61\,\% invalid trips, and the two
+highest values in Q10 come from taxis with only 4 and 25 trips. In Q10 we
+define idle time as the next start minus the previous end. Without a limit,
+days off dominate the average. If we only count breaks shorter than 8 hours,
+the top 20 are between 85 and 106 minutes.
+% TODO (Olav): decide if Q10 should use the plain ranking (as now),
+% a minimum number of gaps, or the 8 h cap as the main answer.
+
+\textbf{Limitations.} Query 6 only checks the GPS points, not the line
+between them, so a taxi that passes City Hall between two points 15 seconds
+apart can be missed.
+
+\textbf{Pain points.} The main practical problem was the size of the data.
+To keep the load time and disk use down with 83 million GPS points, we
+bulk-loaded with \texttt{LOAD DATA}, turned off the binary log and kept
+\texttt{gps\_point} as narrow as possible.
+
+\textbf{What we learned.} We learned that it pays off to explore the data
+properly before designing the schema. Both the duplicate IDs and the GPS
+jumps would have caused problems if we had found them later. We also learned
+how much schema choices such as key size and precomputed columns matter
+when a table has tens of millions of rows.
+
+% =====================================================================
+\section*{Feedback}
+
+% Optional - remove this section or write your own feedback.
+
+% =====================================================================
+\section*{AI use}
+
+We used Claude Code (an AI coding assistant) in this assignment. After our
+first group meeting, where we agreed on what the EDA should investigate, how
+to clean the data, how the schema should look and how to solve each query,
+we used the AI to write first versions of the EDA script, the schema, the
+loader and the queries based on our instructions.
+
+We then went through the code and the results together. Where the AI
+suggested different solutions, we chose between them ourselves, for example
+the cleaning rules and keeping trips with fewer than 3 points. We checked the
+results by comparing the query answers with the EDA and by looking at the
+data directly in the database. We also used the AI to explain parts of the
+dataset and MySQL features.
+All interpretations and choices in the report are our own.
+
+\end{document}
