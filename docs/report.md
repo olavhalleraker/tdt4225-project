@@ -2,7 +2,7 @@
 
 Working draft that collects every finding so far. It follows the structure of the official report template (Introduction, Results, Discussion, AI use) so sections can be moved into the final PDF.
 
-Sources: `eda/eda.py` (checks S1–S15, figures with `--figures`), `sql/schema.sql`, `docs/schema.md`, `docs/cleaning.md`.
+Sources: `eda/eda.py` (checks S1–S15, figures with `--figures`), `sql/schema.sql`, `docs/schema.md`.
 
 ---
 
@@ -78,14 +78,21 @@ Figures: `eda/figures/polyline_points_per_trip.png`, `polyline_duration.png`, `p
 | Keep trips with < 3 points and flag them `is_valid = 0` | 43,815 kept (5,894 empty) | Query 7 must count them. The other queries filter them out. |
 | Keep trips with a > 200 km/h jump and flag them `has_gap = 1` | 38,198 flagged | Dropping them would change the trip counts. Distance queries can exclude them. |
 | Keep long trips and trips outside Porto | – | They are real data. |
-| Store empty ORIGIN_* as NULL | – | Consistent handling of missing values. |
+| Store empty ORIGIN_* as NULL | – | Consistent handling of missing values. The 11,302 B trips without a stand are kept. |
 | Store DAY_TYPE and MISSING_DATA but don't use them for cleaning | – | S5 and S6 show they are unreliable. |
 
 **After cleaning: 448 taxis, 1,710,557 trips and 83,408,413 GPS points.** Only 113 rows were removed in total. The invalid and gap counts are slightly lower than in the EDA because several of the removed rows were short trips.
 
+For the duplicates we kept the copy with the most points, because the other copies were almost always empty or a few points long and looked like a failed start of the same trip. For the points outside Portugal we removed the whole trip rather than just the bad point. There were so few that it made no difference to the results, and it kept the loader simple.
+
+We also compute a few values when loading, so the queries don't have to parse POLYLINE:
+- `start_time` is TIMESTAMP converted to Porto local time (Europe/Lisbon), and `end_time = start_time + 15 s × (points − 1)`.
+- `distance_km` is the sum of haversine distances between consecutive points. It includes the jumps, so distance queries should use `has_gap = 0` when that matters.
+- Coordinates are stored exactly as in the CSV.
+
 ### 2.5 Insertion
 
-The loader is `insert_data.py` (details in `docs/cleaning.md`) and works in two passes:
+The loader is `insert_data.py` and works in two passes:
 - Pass 1 decides which rows to keep, i.e. deduplicates the IDs and finds points outside Portugal.
 - Pass 2 parses the trips in parallel batches of 20k and bulk-loads them with `LOAD DATA LOCAL INFILE`, with foreign key checks turned off during the load.
 

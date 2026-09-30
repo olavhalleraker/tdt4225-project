@@ -7,7 +7,7 @@ Usage (from the project root):
     .venv/bin/python queries/part2_q1_5.py 1 3 5    # run tasks 1, 3 and 5
 
 All answers are computed in MySQL. Python only formats the results.
-Conventions (see docs/cleaning.md):
+Conventions (see docs/report.md, section 2.4):
   * Q1-Q3 count every trip in the cleaned database (incl. is_valid = 0),
     with the valid-only numbers (n_points >= 3) as a secondary line.
   * Q4b and Q5 use valid trips only (is_valid = 1). They are also shown

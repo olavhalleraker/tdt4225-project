@@ -35,7 +35,7 @@ SELECT
 FROM trip;
 ```
 
-The GPS points are counted directly in `gps_point`. `SUM(trip.n_points)` gives the same 83,408,413, which confirms the load. Compared with the raw CSV (1,710,670 rows, 83,409,386 points), cleaning removed 113 trips and 973 points (see `docs/cleaning.md`). Trips with fewer than 3 points make up 2.6 % of the trips but only 45,310 points (0.05 %).
+The GPS points are counted directly in `gps_point`. `SUM(trip.n_points)` gives the same 83,408,413, which confirms the load. Compared with the raw CSV (1,710,670 rows, 83,409,386 points), cleaning removed 113 trips and 973 points (see section 2.4 in `docs/report.md`). Trips with fewer than 3 points make up 2.6 % of the trips but only 45,310 points (0.05 %).
 
 ## Q2. What is the average number of trips per taxi?
 

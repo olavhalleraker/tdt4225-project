@@ -48,7 +48,7 @@ WHERE n_points < 3
 GROUP BY n_points WITH ROLLUP;
 ```
 
-**Interpretation:** most invalid trips have a single point, so the taxi meter was started and stopped almost immediately, or the GPS never logged. 5,894 have an empty POLYLINE. The counts are slightly lower than in the raw-CSV EDA (43,904) because the cleaning dropped 89 short duplicate or out-of-Portugal rows (see `docs/cleaning.md`). Runtime: 0.2 s.
+**Interpretation:** most invalid trips have a single point, so the taxi meter was started and stopped almost immediately, or the GPS never logged. 5,894 have an empty POLYLINE. The counts are slightly lower than in the raw-CSV EDA (43,904) because the cleaning dropped 89 short duplicate or out-of-Portugal rows (see section 2.4 in `docs/report.md`). Runtime: 0.2 s.
 
 ## Q8 – Trips that started on one calendar day and ended on the next
 

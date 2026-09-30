@@ -1,6 +1,6 @@
 """
 Cleans data/porto.csv and loads it into the MySQL schema from sql/schema.sql
-(taxi -> trip -> gps_point). Cleaning rules are documented in docs/cleaning.md,
+(taxi -> trip -> gps_point). Cleaning rules are documented in docs/report.md (section 2.4),
 the column mapping in docs/schema.md section 2.
 
 Run create_tables.py first (the loader expects empty tables):

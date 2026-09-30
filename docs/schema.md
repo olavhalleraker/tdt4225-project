@@ -13,7 +13,7 @@ call_type (code PK) ──< trip >── taxi (taxi_id PK)
 |-------------|----------------|------------------------------------------------------|
 | `call_type` | 3              | lookup table for A/B/C with a description, filled by `schema.sql` |
 | `taxi`      | ~450           | one row per distinct `TAXI_ID`                       |
-| `trip`      | ~1.7M          | one row per cleaned CSV row (see `docs/cleaning.md`), raw attributes plus precomputed summary columns |
+| `trip`      | ~1.7M          | one row per cleaned CSV row (see section 2.4 in `docs/report.md`), raw attributes plus precomputed summary columns |
 | `gps_point` | ~80M           | one row per POLYLINE point, stored as compactly as possible |
 
 ## 1. Design choices
@@ -25,7 +25,7 @@ call_type (code PK) ──< trip >── taxi (taxi_id PK)
 - **gps_point** is the POLYLINE normalised into rows. This turns queries 1, 6 and 7 into plain SQL, which a JSON column would not.
 
 ### 1.2 Trip key: surrogate `INT` instead of TRIP_ID
-- `TRIP_ID` is **not unique** in the raw data. 80 ids appear more than once, and the rows differ. For example, `1372702836620000080` appears once as call type B with 2 points and once as C with many points. The loader keeps one copy per id (see `docs/cleaning.md`), so `trip_code` is unique in the loaded data, but the surrogate key keeps the schema independent of that cleaning rule.
+- `TRIP_ID` is **not unique** in the raw data. 80 ids appear more than once, and the rows differ. For example, `1372702836620000080` appears once as call type B with 2 points and once as C with many points. The loader keeps one copy per id (see section 2.4 in `docs/report.md`), so `trip_code` is unique in the loaded data, but the surrogate key keeps the schema independent of that cleaning rule.
 - The trip key is repeated in all ~80M `gps_point` rows. A 4-byte `INT UNSIGNED` instead of an 8-byte `BIGINT` saves about 320 MB.
 - The original id is kept as `trip.trip_code BIGINT UNSIGNED`. It has a `UNIQUE` index, so the database enforces that each TRIP_ID occurs once after cleaning, and trips can still be looked up by it.
 
@@ -100,7 +100,7 @@ All CSV rows that survive cleaning are kept as `trip` rows, including trips with
 
 ## 2. Column mapping (CSV → tables)
 
-How `insert_data.py` fills each column. Cleaning rules are in `docs/cleaning.md`.
+How `insert_data.py` fills each column. Cleaning rules are in section 2.4 of `docs/report.md`.
 
 
 **taxi**
