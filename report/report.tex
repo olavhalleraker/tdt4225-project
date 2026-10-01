@@ -249,6 +249,59 @@ CREATE TABLE gps_point (
 
 \subsection*{Part 2 -- Queries}
 
+The queries are in two Python programs, \texttt{queries/part2\_q1\_5.py} and
+\texttt{queries/part2\_q6\_10.py}, built like \texttt{example.py} from the
+assignment. Each program opens a connection through \texttt{DbConnector}
+(\texttt{mysql-connector-python}, settings from a \texttt{.env} file), runs the
+SQL for each task with \texttt{cursor.execute()} and reads the rows with
+\texttt{cursor.fetchall()}. All answers are computed in MySQL. Python only
+prints the results as tables with \texttt{tabulate}, does a few small counts
+on the returned rows (for example how many circular trips hardly move in
+Q9), and writes the full lists to \texttt{queries/output/}. Each program
+prints its SQL before the result, so the screenshots show the query that was
+run. One task can be run on its own, for example
+\texttt{python queries/part2\_q6\_10.py 6}.
+
+The two queries that do the most work are Q6 and Q10. Q6 first uses the
+bounding box stored on each trip to skip trips that are nowhere near City
+Hall, and then measures the distance from each remaining GPS point (inner
+part of the query):
+\begin{lstlisting}[language=SQL]
+SELECT p.trip_id,
+       MIN(ST_Distance_Sphere(POINT(p.lon, p.lat),
+                              POINT(-8.62911, 41.15794))) AS min_dist_m
+FROM trip t
+JOIN gps_point p ON p.trip_id = t.id
+WHERE t.min_lat <= 41.15794 + 0.0010 AND t.max_lat >= 41.15794 - 0.0010
+  AND t.min_lon <= -8.62911 + 0.0013 AND t.max_lon >= -8.62911 - 0.0013
+  AND p.lat BETWEEN 41.15794 - 0.0010 AND 41.15794 + 0.0010
+  AND p.lon BETWEEN -8.62911 - 0.0013 AND -8.62911 + 0.0013
+GROUP BY p.trip_id
+HAVING min_dist_m <= 100;
+\end{lstlisting}
+Q10 uses the window function \texttt{LAG} to find the end of the previous
+trip of the same taxi. The idle time is the start of a trip minus the end of
+the previous one. The version below is shortened. The program also
+computes the 8-hour variant and counts overlapping trips:
+\begin{lstlisting}[language=SQL]
+WITH ordered AS (
+    SELECT taxi_id,
+           CAST(start_unix AS SIGNED)
+             - CAST(LAG(start_unix + duration_s)
+                    OVER (PARTITION BY taxi_id ORDER BY start_unix, id)
+               AS SIGNED) AS idle_s
+    FROM trip
+    WHERE is_valid = 1
+)
+SELECT taxi_id, ROUND(AVG(idle_s) / 3600, 2) AS avg_idle_h
+FROM ordered
+WHERE idle_s >= 0
+GROUP BY taxi_id
+ORDER BY avg_idle_h DESC
+LIMIT 20;
+\end{lstlisting}
+The full SQL for every task is in the two programs.
+
 Q1--Q3 count all trips in the database. From Q4b on we only use valid trips
 (at least 3 points). All times are local Porto time.
 
