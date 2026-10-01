@@ -441,18 +441,31 @@ when a table has tens of millions of rows.
 % =====================================================================
 \section*{AI use}
 
-We used Claude Code (an AI coding assistant) in this assignment. After our
-first group meeting, where we agreed on what the EDA should investigate, how
-to clean the data, how the schema should look and how to solve each query,
-we used the AI to write first versions of the EDA script, the schema, the
-loader and the queries based on our instructions.
+We used Claude Code, an AI coding assistant, throughout the assignment.
 
-We then went through the code and the results together. Where the AI
-suggested different solutions, we chose between them ourselves, for example
-the cleaning rules and keeping trips with fewer than 3 points. We checked the
-results by comparing the query answers with the EDA and by looking at the
-data directly in the database. We also used the AI to explain parts of the
-dataset and MySQL features.
-All interpretations and choices in the report are our own.
+\textbf{Setup and planning.} We created a project in Claude Code and first
+sat down together to collect the sources the AI should work from: the
+assignment text, the report template and NTNU's guidelines on AI in student
+work. This gave the AI the same starting point as us and helped us keep
+control of the project. Based on these sources we used the AI to sketch out
+what we needed: the EDA checks, the cleaning rules, the schema, the loader and
+the ten queries. We then worked through that plan step by step.
+
+\textbf{Code.} The AI wrote the first versions of the EDA script, the schema,
+the loader and the query programs from our instructions. That first version
+was a good start, but far from the final result. Both of us went back and
+forth with the AI, asked why things were done the way they were, and
+questioned several of the choices, for example how to handle duplicate trip
+IDs, whether to delete or keep the short trips, and which timezone to use.
+It took many rounds of critical review to get to what we hand in now, and
+because of that we feel we have control of the product.
+
+\textbf{Checking the results.} We ran all the code ourselves and checked the
+answers by comparing the query results with the EDA and by looking at the
+data directly in the database.
+
+\textbf{Report.} The AI helped us draft and structure the report text. We
+went through it, rewrote parts of it and checked the numbers against the
+output. All interpretations and choices in the report are our own.
 
 \end{document}
