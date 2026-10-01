@@ -321,7 +321,9 @@ only count valid trips). The least active taxi has 1 trip, the most active
 \screenshot{q3}{Task 3: the 20 taxis with the most trips.}
 
 \textbf{4a.} B (taxi stand) is the most used call type for 354 taxis, C for 82
-and A for 12. One taxi has as many B as C trips, and we picked B.
+and A for 12. One taxi has as many B as C trips, and we picked B. The
+screenshot shows the first 20 taxis. The full table for all 448 taxis is in
+\texttt{queries/output/q4a\_full.txt}.
 
 \textbf{4b.} Street hails (C) are the longest trips on average and clearly
 dominate at night:
@@ -348,7 +350,9 @@ number 51 on hours.
 \screenshot{q5}{Task 5.}
 
 \textbf{6.} \textbf{126,295} valid trips pass within 100\,m of Porto City
-Hall. This matches what we found directly from the CSV during the EDA.
+Hall. This matches what we found directly from the CSV during the EDA. The
+screenshot shows the first 20. The full list of trips is in
+\texttt{queries/output/q6\_trips.csv}.
 \screenshot{q6}{Task 6.}
 
 \textbf{7.} There are \textbf{43,815 invalid trips} (2.56\,\%): 5,894 with no
@@ -356,12 +360,14 @@ points, 30,532 with one and 7,389 with two.
 \screenshot{q7}{Task 7.}
 
 \textbf{8.} \textbf{8,028} trips start on one day and end on the next
-(0.48\,\% of valid trips). None of them crosses more than one midnight.
+(0.48\,\% of valid trips). None of them crosses more than one midnight. The
+full list is in \texttt{queries/output/q8\_midnight\_trips.csv}.
 \screenshot{q8}{Task 8.}
 
 \textbf{9.} \textbf{21,467} trips start and end within 50\,m of each other.
 7,608 of them hardly move at all (less than 100\,m driven), while 12,177
-drive at least 1\,km before coming back.
+drive at least 1\,km before coming back. The full list is in
+\texttt{queries/output/q9\_circular\_trips.csv}.
 \screenshot{q9}{Task 9.}
 
 \textbf{10.} The two taxis at the top, 20000941 (1,746.6\,h) and 20000969
