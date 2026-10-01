@@ -395,9 +395,9 @@ of some rankings. The top taxi in Q3 has 61\,\% invalid trips, and the two
 highest values in Q10 come from taxis with only 4 and 25 trips. In Q10 we
 define idle time as the next start minus the previous end. Without a limit,
 days off dominate the average. If we only count breaks shorter than 8 hours,
-the top 20 are between 85 and 106 minutes.
-% TODO (Olav): decide if Q10 should use the plain ranking (as now),
-% a minimum number of gaps, or the 8 h cap as the main answer.
+the top 20 are between 85 and 106 minutes. We still use the plain average
+as our main answer, since that is what the task asks for, and show the
+8-hour variant next to it in the output.
 
 \textbf{Limitations.} Query 6 only checks the GPS points, not the line
 between them, so a taxi that passes City Hall between two points 15 seconds
