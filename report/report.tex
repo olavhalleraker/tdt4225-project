@@ -321,7 +321,9 @@ drive at least 1\,km before coming back.
 
 \textbf{What we did differently.} The assignment does not say which timezone
 to use. We chose local Porto time, because that is when the trips actually
-happened, and it moves about 1\,\% of the trips between time bands in 4b.
+happened. 157,929 trips (9\,\%) end up in a different time band than with
+UTC, but the share of trips in each band changes by at most about one
+percentage point in 4b.
 We also could not use TRIP\_ID as the primary key, since it is not unique,
 so \texttt{trip} got its own key.
 
