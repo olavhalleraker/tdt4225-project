@@ -144,22 +144,35 @@ and \textbf{448 taxis}, covering exactly one year.
 \edafig{polyline_max_speed}{Highest speed between two consecutive points in each trip.}
 \edafig{polyline_map_hexbin}{Density of GPS points around Porto.}
 
-\textbf{Cleaning.} We removed as little as possible:
-\begin{itemize}
-  \item For duplicate TRIP\_IDs we kept the copy with the most points. The
-        other copies were almost always empty or only a few points long
-        (81 rows removed).
-  \item Trips with a point outside mainland Portugal were removed completely
-        (32 trips). There were so few that repairing them was not worth it.
-  \item Trips with fewer than 3 points are kept, because query 7 has to count
-        them. They get \texttt{is\_valid = 0}, and the other queries filter
-        them out.
-  \item Trips with a GPS jump are kept and marked with \texttt{has\_gap = 1},
-        so distance queries can leave them out.
-  \item Empty ORIGIN\_CALL and ORIGIN\_STAND are stored as NULL.
-\end{itemize}
+\textbf{Missing and buggy data.} Table~\ref{tab:cleaning} sums up what we
+found and how we handled it. We removed as little as possible and marked the
+rest, so the queries can decide what to include.
+
+\begin{table}[H]\centering\small
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}X r >{\raggedright\arraybackslash}X r}
+\toprule
+Problem & Rows & What we did & Removed\\
+\midrule
+Empty ORIGIN\_CALL / ORIGIN\_STAND (only used by call type A / B) & -- & Stored as NULL & 0\\
+B trips without ORIGIN\_STAND & 11,302 & Kept, stand is NULL & 0\\
+Duplicate TRIP\_ID (80 IDs) & 161 & Kept the copy with the most GPS points. The others were empty or a few points long & 81\\
+Fewer than 3 GPS points (5,901 empty) & 43,904 & Kept and marked \texttt{is\_valid = 0}, since query 7 has to count them & 0\\
+GPS points outside mainland Portugal & 32 & Removed the whole trip & 32\\
+Jump above 200\,km/h between two points & 38,216 & Kept and marked \texttt{has\_gap = 1}, so distance queries can leave them out & 0\\
+DAY\_TYPE is always ``A'' & all & Stored, but not used & 0\\
+MISSING\_DATA is true for only 10 trips & 10 & Stored, but not used. We judge gaps from the trajectories instead & 0\\
+Very long trips (more than 3\,h) & 847 & Kept, they are real data & 0\\
+\bottomrule
+\end{tabularx}
+\caption{Missing and buggy data. Rows are counted in the raw CSV.}
+\label{tab:cleaning}
+\end{table}
+
 After cleaning the database has \textbf{448 taxis, 1,710,557 trips and
-83,408,413 GPS points}. Only 113 rows were removed in total.
+83,408,413 GPS points}. Only 113 rows were removed in total. The counts
+of invalid trips and trips with a jump are a little lower after cleaning
+(43,815 and 38,198), because some of the removed rows were among them.
 
 \screenshot{eda_output}{EDA output (\texttt{eda/eda.py}).}
 
