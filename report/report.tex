@@ -50,13 +50,14 @@
     {\includegraphics[width=\linewidth,height=0.8\textheight,keepaspectratio]{screenshots/#1.png}}%
     {\fbox{\parbox[c][2.5cm][c]{0.9\linewidth}{\centering\color{gray}
       screenshot missing: screenshots/#1.png}}}%
-  \caption{#2}
+  \caption{#2}\label{fig:#1}
   \end{figure}}
 
-\newcommand{\edafig}[2]{%
+% EDA figure, optional width (fraction of \linewidth), label fig:<name>
+\newcommand{\edafig}[3][0.8]{%
   \begin{figure}[H]\centering
-  \includegraphics[width=0.8\linewidth]{figures/#1.pdf}
-  \caption{#2}
+  \includegraphics[width=#1\linewidth]{figures/#2.pdf}
+  \caption{#3}\label{fig:#2}
   \end{figure}}
 
 \begin{document}
@@ -66,7 +67,7 @@
 \begin{center}
   {\fontsize{18}{22}\selectfont\bfseries Report\par}
   \vspace{4pt}
-  {\fontsize{14}{17}\selectfont Assignment 2 - MySQL\par}
+  {\fontsize{14}{17}\selectfont Assignment 2 -- MySQL\par}
 \end{center}
 \vspace{12pt}
 
@@ -88,12 +89,14 @@ The main problems we had to solve were that TRIP\_ID is not unique, that
 some trips have almost no GPS points or obviously wrong points, and that
 83 million GPS points take a lot of space and time to load.
 
-The first days we sat together at school, went through the assignment and
-agreed on a plan for the EDA, the cleaning, the schema and each query. After
-that Ingrid took over and did most of the EDA, the loading and the queries on
-her own. The parts she got stuck on she handed over to Olav, who continued
-from there. Whenever one of us did not understand something in the other's
-work, we sat down and worked it out together.
+During the first days we sat together at school, went through the assignment and agreed on 
+a shared plan for the EDA, the data cleaning, the schema and each of the 
+queries. We wrote the first draft of the code together, using AI-assisted
+development, and then divided the rest of the implementation between us.
+Ingrid continued with the EDA, the data loading and the queries, and
+Olav took over the final stage, completing the remaining parts and
+getting everything ready for delivery. Whenever one of us had questions
+about the other's work, we discussed it together, either online or in person.
 
 MySQL 8.0.39 ran locally in Docker, and we used Python with
 \texttt{mysql-connector-python}, \texttt{pandas} and \texttt{haversine}.
@@ -113,36 +116,46 @@ and \textbf{448 taxis}, covering exactly one year.
   \item ORIGIN\_CALL and ORIGIN\_STAND are the only columns with empty values
         (78.7\,\% and 52.9\,\%). This is expected, since they only apply to
         call type A and B. 11,302 B trips still have no stand.
-  \item TRIP\_ID is just TIMESTAMP + ``6'' + TAXI\_ID. 80 IDs occur more than
-        once, and in most cases the copies are different trips, typically
-        a short stub next to the real one.
+  \item TRIP\_ID is TIMESTAMP, the digit 6 and TAXI\_ID put together. 80 IDs
+        occur more than once (161 rows). In 35 of them a stub of 0--6 points
+        sits next to a longer trip, and in 31 all copies have fewer than
+        3 points.
   \item Call types: A 21.3\,\%, B 47.8\,\%, C 30.9\,\%.
-  \item DAY\_TYPE is ``A'' in every row, and MISSING\_DATA is true for only
-        10 rows. Neither column tells us anything useful.
-  \item TIMESTAMP is in UTC. 157,929 trips end up in a different time band
-        depending on whether we use UTC or Porto time, so we use local Porto
-        time (Europe/Lisbon) everywhere.
+  \item DAY\_TYPE is ``A'' in every row, even on Christmas Day, and
+        MISSING\_DATA is true for only 10 rows. Neither column carries
+        usable information.
+  \item TIMESTAMP is Unix time, i.e.\ UTC. 157,929 trips end up in a
+        different time band depending on whether we use UTC or Porto time,
+        so we use local Porto time (Europe/Lisbon) everywhere.
+  \item Trips start at all hours, but between 09 and 18 there are on average
+        1.7 times as many per hour as between 00 and 08
+        (Figure~\ref{fig:metadata_trips_by_hour}).
 \end{itemize}
 
 \textbf{Trajectories.}
 \begin{itemize}
-  \item Median 41 points per trip. 43,904 trips (2.6\,\%) have fewer than
-        3 points: 5,901 are empty, 30,609 have one point and 7,394 have two.
+  \item Median 41 points per trip (Figure~\ref{fig:polyline_points_per_trip}).
+        43,904 trips (2.6\,\%) have fewer than 3 points: 5,901 are empty,
+        30,609 have one point and 7,394 have two.
   \item Median duration is 10 minutes and median distance 4.0\,km, but the
         longest trip is 16\,h and the longest distance 1,229\,km.
-  \item 32 trips have points far outside Portugal, as far away as latitude 51
-        and longitude 53. These are GPS errors.
+  \item 32 trips have points far outside Portugal, up to 51$^\circ$N and
+        53$^\circ$E. These are considered GPS errors.
   \item 38,216 trips have at least one jump of more than 833\,m in 15\,s
-        (above 200\,km/h). Most of them look like a gap in the signal rather
-        than a single bad point, and they explain the extreme distances.
-  \item 7,142 trips leave the Porto area, but these are mostly real trips
-        on the motorway, so we kept them.
+        (above 200\,km/h, Figure~\ref{fig:polyline_max_speed}). Most of them
+        look like a gap in the signal rather than a single bad point: we
+        found only 208 single points that jump away and straight back. These 
+        jumps explain the extreme distances.
+  \item 7,142 trips leave the Porto area
+        (Figure~\ref{fig:polyline_map_hexbin}). Apart from the 32 above,
+        85\,\% of them have no jump at all, so they seem like real trips on
+        the motorway, and we kept them.
 \end{itemize}
 
 \edafig{polyline_points_per_trip}{Number of GPS points per trip.}
 \edafig{metadata_trips_by_hour}{Trips per hour of the day (local time).}
-\edafig{polyline_max_speed}{Highest speed between two consecutive points in each trip.}
-\edafig{polyline_map_hexbin}{Density of GPS points around Porto.}
+\edafig{polyline_max_speed}{Highest speed between two consecutive points in each valid trip.}
+\edafig[0.6]{polyline_map_hexbin}{Density of GPS points around Porto. The red cross marks City Hall.}
 
 \textbf{Missing and buggy data.} Table~\ref{tab:cleaning} sums up what we
 found and how we handled it. We removed as little as possible and marked the
@@ -156,13 +169,13 @@ Problem & Rows & What we did & Removed\\
 \midrule
 Empty ORIGIN\_CALL / ORIGIN\_STAND (only used by call type A / B) & -- & Stored as NULL & 0\\
 B trips without ORIGIN\_STAND & 11,302 & Kept, stand is NULL & 0\\
-Duplicate TRIP\_ID (80 IDs) & 161 & Kept the copy with the most GPS points. The others were empty or a few points long & 81\\
-Fewer than 3 GPS points (5,901 empty) & 43,904 & Kept and marked \texttt{is\_valid = 0}, since query 7 has to count them & 0\\
-GPS points outside mainland Portugal & 32 & Removed the whole trip & 32\\
+Duplicate TRIP\_ID (80 IDs) & 161 & Kept the copy with the most GPS points, or the first one in the CSV on a tie. A taxi cannot start two trips in the same second, so the other copies (0--6 points each) are recording errors, not real trips & 81\\
+Fewer than 3 GPS points (5,901 empty) & 43,904 & Kept and marked \texttt{is\_valid = 0}, since Q7 has to count them & 0\\
+GPS points outside mainland Portugal & 32 & Removed the whole trip. It is only 0.002\,\% of the trips, so the effect on the answers is negligible, and it is simpler than repairing them & 32\\
 Jump above 200\,km/h between two points & 38,216 & Kept and marked \texttt{has\_gap = 1}, so distance queries can leave them out & 0\\
 DAY\_TYPE is always ``A'' & all & Stored, but not used & 0\\
 MISSING\_DATA is true for only 10 trips & 10 & Stored, but not used. We judge gaps from the trajectories instead & 0\\
-Very long trips (more than 3\,h) & 847 & Kept, they are real data & 0\\
+Very long trips (more than 3\,h) & 847 & Kept. Some may be a meter left running, but we cannot tell which, and they are only 0.05\,\% of the trips & 0\\
 \bottomrule
 \end{tabularx}
 \caption{Missing and buggy data. Rows are counted in the raw CSV.}
@@ -174,30 +187,48 @@ After cleaning the database has \textbf{448 taxis, 1,710,557 trips and
 of invalid trips and trips with a jump are a little lower after cleaning
 (43,815 and 38,198), because some of the removed rows were among them.
 
-\screenshot{eda_output}{EDA output (\texttt{eda/eda.py}).}
+\screenshot{eda_output_1}{EDA output (\texttt{eda/eda.py}), checks 3, 5 and 6.}
+\screenshot{eda_output_2}{EDA output (\texttt{eda/eda.py}), checks 9, 12 and 13.}
 
 \subsection*{Part 1 -- Schema}
 
 We use four tables: \texttt{call\_type}, \texttt{taxi}, \texttt{trip} and
 \texttt{gps\_point}. The most important choices were:
 \begin{itemize}
-  \item \texttt{trip} gets its own integer key, since TRIP\_ID is not unique
-        in the raw data. A 4-byte key also saves about 320\,MB in
-        \texttt{gps\_point}.
+  \item \texttt{trip} gets its own 4-byte integer key instead of the
+        19-digit TRIP\_ID, which needs an 8-byte BIGINT. TRIP\_ID is unique
+        after cleaning (we enforce it with a UNIQUE key), but the trip key is
+        repeated in all 83 million rows of \texttt{gps\_point}, so the
+        smaller key saves about 320\,MB there.
   \item Values we need often (start and end time, duration, distance,
         number of points, start and end point, bounding box) are computed
-        once when loading. That way only query 6 has to read the 83 million
-        GPS points.
+        once when loading. That way, only Q6 has to read the 83 million
+        GPS points. These columns repeat data from \texttt{gps\_point}, but
+        the data is loaded once and never updated, so they cannot get out
+        of sync.
   \item \texttt{gps\_point} is kept as small as possible: a composite primary
         key, no timestamp per point (it is \texttt{start\_time + 15 s $\cdot$ seq})
         and no extra indexes. The whole database is 3.3\,GB.
+  \item Coordinates are stored as DECIMAL(8,6) and DECIMAL(9,6). The CSV
+        never has more than 6 decimals, so every value is stored exactly, in
+        4 and 5 bytes. FLOAT also takes 4 bytes, but cannot store every
+        6-decimal value exactly.
+  \item Deleting a taxi deletes its trips, and deleting a trip deletes its
+        GPS points (\texttt{ON DELETE CASCADE}), so a bad trip can be removed
+        with one statement without leaving orphan rows. \texttt{call\_type}
+        uses \texttt{RESTRICT}, so a code cannot be removed while trips use
+        it.
 \end{itemize}
 
 The loader (\texttt{insert\_data.py}) reads the CSV twice. The first pass
 decides which rows to keep, and the second parses the trips in batches and
-bulk-loads them with \texttt{LOAD DATA LOCAL INFILE}. The full load takes about
-4 minutes. Afterwards we checked that the number of points matches
-\texttt{SUM(n\_points)}, that there are no orphan rows, and that a few
+bulk-loads them with \texttt{LOAD DATA LOCAL INFILE}, sent from Python
+through \texttt{mysql-connector-python} instead of row-by-row
+\texttt{INSERT}s as in \texttt{example.py}. The full load takes about
+4 minutes. The foreign key and unique checks are turned off during the
+load, so afterwards we checked that the number of points matches
+\texttt{SUM(n\_points)} (shown in the Q1 output, Figure~\ref{fig:q1}), that
+all trip codes are distinct, that there are no orphan rows, and that a few
 trips match the CSV exactly.
 
 \begin{lstlisting}[language=SQL]
@@ -270,15 +301,16 @@ SQL for each task with \texttt{cursor.execute()} and reads the rows with
 \texttt{cursor.fetchall()}. All answers are computed in MySQL. Python only
 prints the results as tables with \texttt{tabulate}, does a few small counts
 on the returned rows (for example how many circular trips hardly move in
-Q9), and writes the full lists to \texttt{queries/output/}. Each program
-prints its SQL before the result, so the screenshots show the query that was
-run. One task can be run on its own, for example
+Q9), and writes the full lists to \texttt{queries/output/}. One task can be
+run on its own, for example
 \texttt{python queries/part2\_q6\_10.py 6}.
 
 The two queries that do the most work are Q6 and Q10. Q6 first uses the
 bounding box stored on each trip to skip trips that are nowhere near City
 Hall, and then measures the distance from each remaining GPS point (inner
-part of the query):
+part of the query). The margins of $\pm$0.0010$^\circ$ latitude and
+$\pm$0.0013$^\circ$ longitude are about 110\,m at Porto, so the box
+contains the whole 100\,m circle:
 \begin{lstlisting}[language=SQL]
 SELECT p.trip_id,
        MIN(ST_Distance_Sphere(POINT(p.lon, p.lat),
@@ -292,9 +324,17 @@ WHERE t.min_lat <= 41.15794 + 0.0010 AND t.max_lat >= 41.15794 - 0.0010
 GROUP BY p.trip_id
 HAVING min_dist_m <= 100;
 \end{lstlisting}
+Q6 and Q9 use MySQL's \texttt{ST\_Distance\_Sphere} instead of the
+\texttt{haversine} package, so the distances are computed in the database
+and the GPS points never have to be sent to Python. Both compute the
+great-circle distance on a sphere, and the Q6 answer matches the haversine
+count from the EDA.
+
 Q10 uses the window function \texttt{LAG} to find the end of the previous
 trip of the same taxi. The idle time is the start of a trip minus the end of
-the previous one. The version below is shortened. The program also
+the previous one. We compute it in Unix seconds rather than local
+\texttt{DATETIME}, so idle times across the two daylight saving changes are
+not off by an hour. The version below is shortened. The program also
 computes the 8-hour variant and counts overlapping trips:
 \begin{lstlisting}[language=SQL]
 WITH ordered AS (
@@ -315,95 +355,129 @@ LIMIT 20;
 \end{lstlisting}
 The full SQL for every task is in the two programs.
 
-Q1--Q3 count all trips in the database. From Q4b on we only use valid trips
-(at least 3 points). All times are local Porto time.
+The assignment defines an invalid trip as a trip with fewer than 3 GPS
+points, so for the counting questions Q1--Q4a we count every trip in the
+database. From Q4b on the questions are about durations, distances,
+positions and the time between trips, where a trip with 0--2 points has no
+usable value, so we only use valid trips (at least 3 points). Such a trip
+lasts at most 15\,s and has no real route, so it would pull the averages in
+Q4b and Q5 down, and a trip with one point would always count as circular
+in Q9. All times are local Porto time.
 
-\textbf{1.} There are \textbf{448 taxis, 1,710,557 trips and 83,408,413 GPS
+\textbf{Q1.} There are \textbf{448 taxis, 1,710,557 trips and 83,408,413 GPS
 points}. Counting only valid trips, there are 1,666,742 trips with
 83,363,103 points.
-\screenshot{q1}{Task 1.}
+\screenshot{q1}{Q1. The last column of the second table is the
+\texttt{SUM(n\_points)} cross-check.}
 
-\textbf{2.} On average each taxi has \textbf{3,818.2 trips} (3,720.4 if we
+\textbf{Q2.} On average each taxi has \textbf{3,818.2 trips} (3,720.4 if we
 only count valid trips). The least active taxi has 1 trip, the most active
 10,731.
-\screenshot{q2}{Task 2.}
+\screenshot{q2}{Q2.}
 
-\textbf{3.} Taxi 20000080 has the most trips (10,731), followed by 20000403
+\textbf{Q3.} Taxi 20000080 has the most trips (10,731), followed by 20000403
 (9,236) and 20000066 (8,443). Number 20 is 20000235 with 6,410 trips.
-61\,\% of the trips of the top taxi have fewer than 3 points.
-\screenshot{q3}{Task 3: the 20 taxis with the most trips.}
+61\,\% of the top taxi's trips have fewer than 3 points. With valid trips
+only, 20000080 (4,211 valid trips) would not be in the top 20.
+\screenshot{q3}{Q3: the 20 taxis with the most trips.}
 
-\textbf{4a.} B (taxi stand) is the most used call type for 354 taxis, C for 82
-and A for 12. One taxi has as many B as C trips, and we picked B. The
-screenshot shows the first 20 taxis. The full table for all 448 taxis is in
+\textbf{Q4a.} B (taxi stand) is the most used call type for 354 taxis, C for
+82 and A for 12. Ties are broken alphabetically, so the one tied taxi
+(20000344, as many B as C trips) gets B. The screenshot shows the first 20
+taxis. The full table for all 448 taxis is in
 \texttt{queries/output/q4a\_full.txt}.
 
-\textbf{4b.} Street hails (C) are the longest trips on average and clearly
-dominate at night:
+\textbf{Q4b.} Street hails (C) are the longest trips on average, and they are
+ more likely to start at night: 32\,\% of C trips start between 00 and
+06, against 12--13\,\% for A and B (Table~\ref{tab:q4b}).
 
 \begin{table}[H]\centering\small
 \begin{tabular}{lrrrrrr}
 \toprule
-Call type & Duration (min) & Distance (km) & 00--06 & 06--12 & 12--18 & 18--24\\
+ & Avg.\ duration & Avg.\ distance & \multicolumn{4}{c}{Share of trips starting}\\
+\cmidrule(lr){4-7}
+Call type & (min) & (km) & 00--06 & 06--12 & 12--18 & 18--24\\
 \midrule
 A (central) & 12.59 & 5.43 & 12.05\,\% & 31.82\,\% & 32.59\,\% & 23.55\,\%\\
 B (stand)   & 11.23 & 5.11 & 13.02\,\% & 27.76\,\% & 34.56\,\% & 24.65\,\%\\
 C (street)  & 13.67 & 6.67 & 31.78\,\% & 24.40\,\% & 24.00\,\% & 19.82\,\%\\
 \bottomrule
 \end{tabular}
+\caption{Q4b: average duration and distance, and share of trips starting in
+each time band, per call type (valid trips, local time).}
+\label{tab:q4b}
 \end{table}
-Without the trips that have a GPS jump, the average distances are 2--4\,\%
+Without the trips that have a GPS jump, the average distances are 1.5--4\,\%
 lower (A 5.34, B 5.01, C 6.40\,km).
-\screenshot{q4ab}{Task 4a (first 20 taxis and summary) and task 4b.}
+\screenshot{q4ab}{Q4a (first 20 taxis and summary) and Q4b.}
 
-\textbf{5.} Taxi \textbf{20000904} has both the most hours (1,961.0\,h) and
-the longest total distance (62,788\,km). Second on hours is 20000129
+\textbf{Q5.} We define hours driven as the sum of the trip durations, and
+distance driven as the sum of \texttt{distance\_km} (haversine between
+consecutive points, computed when loading). Taxi \textbf{20000904} has both
+the most hours (1,961.0\,h) and the longest total distance (62,788\,km).
+Second on hours is 20000129
 (1,649.6\,h). Second on distance is 20000351 (56,639\,km), which is only
-number 51 on hours.
-\screenshot{q5}{Task 5.}
+number 51 on hours. Without the trips that have a GPS jump, 20000904 is
+still first on both, and 20000351 is still second on distance, so the answer
+does not depend on these trips.
+\screenshot{q5}{Q5.}
 
-\textbf{6.} \textbf{126,295} valid trips pass within 100\,m of Porto City
+\textbf{Q6.} \textbf{126,295} valid trips pass within 100\,m of Porto City
 Hall. This matches what we found directly from the CSV during the EDA. The
-screenshot shows the first 20. The full list of trips is in
-\texttt{queries/output/q6\_trips.csv}.
-\screenshot{q6}{Task 6.}
+screenshot shows the first 20. The full list is in
+\texttt{queries/output/q6\_trips.csv}. It has 126,532 rows, since it also
+includes the 237 invalid trips (marked with \texttt{is\_valid = 0}).
+\screenshot{q6}{Q6.}
 
-\textbf{7.} There are \textbf{43,815 invalid trips} (2.56\,\%): 5,894 with no
-points, 30,532 with one and 7,389 with two.
-\screenshot{q7}{Task 7.}
+\textbf{Q7.} There are \textbf{43,815 invalid trips} (2.56\,\%): 5,894 with
+no points, 30,532 with one and 7,389 with two.
+\screenshot{q7}{Q7.}
 
-\textbf{8.} \textbf{8,028} trips start on one day and end on the next
-(0.48\,\% of valid trips). None of them crosses more than one midnight. The
-full list is in \texttt{queries/output/q8\_midnight\_trips.csv}.
-\screenshot{q8}{Task 8.}
+\textbf{Q8.} A trip is a midnight crosser if
+\texttt{DATE(end\_time) > DATE(start\_time)} in local time.
+\textbf{8,028} trips start on one day and end on the next (0.48\,\% of valid
+trips). None of them crosses more than one midnight. The full list is in
+\texttt{queries/output/q8\_midnight\_trips.csv}.
+\screenshot{q8}{Q8.}
 
-\textbf{9.} \textbf{21,467} trips start and end within 50\,m of each other.
-7,608 of them hardly move at all (less than 100\,m driven), while 12,177
-drive at least 1\,km before coming back. The full list is in
-\texttt{queries/output/q9\_circular\_trips.csv}.
-\screenshot{q9}{Task 9.}
+\textbf{Q9.} \textbf{21,467} trips start and end within 50\,m of each other,
+measured between the stored start and end point. 7,608 of them hardly move at all (less than 100\,m driven), while 12,177
+drive at least 1\,km before coming back. We still count the trips that
+hardly move, since the task only asks for start and end within 50\,m. The
+full list is in \texttt{queries/output/q9\_circular\_trips.csv}.
+\screenshot{q9}{Q9.}
 
-\textbf{10.} The two taxis at the top, 20000941 (1,746.6\,h) and 20000969
-(282.1\,h), hardly drove at all during the year. From number 3 (20000312,
-13.1\,h) the averages are between 5 and 13 hours.
-\screenshot{q10}{Task 10: the 20 taxis with the highest average idle time.}
+\textbf{Q10.} The two taxis at the top, 20000941 (1,746.6\,h) and 20000969
+(282.1\,h), had almost no trips (4 and 25 valid trips). From number 3
+(20000312, 13.1\,h) the averages are between 5 and 13 hours. As in the other
+queries from Q4b on, we only use valid trips. Most invalid trips have 0 or
+1 point, and some taxis have thousands of them (taxi 20000080 has 6,520), so
+they look like recording errors, and including them would split real breaks
+into many short ones. In 792 cases a trip starts before the previous trip of
+the same taxi has ended. A negative idle time is not a break, so we leave
+these cases out of the average. They are only 0.05\,\% of all gaps.
+\screenshot{q10}{Q10: the 20 taxis with the highest average idle time.}
 
 % =====================================================================
 \section*{Discussion}
 
-\textbf{What we did differently.} The assignment does not say which timezone
-to use. We chose local Porto time, because that is when the trips actually
-happened. 157,929 trips (9\,\%) end up in a different time band than with
-UTC, but the share of trips in each band changes by at most about one
-percentage point in 4b.
-We also could not use TRIP\_ID as the primary key, since it is not unique,
-so \texttt{trip} got its own key.
+\textbf{What we did differently.} Group 16 has access to a VM at IDI, but we
+ran MySQL 8.0.39 locally in Docker instead. It was simpler to set up, and
+our own computer had enough power to load and query the 83 million GPS
+points.
+The assignment does not say which timezone to use. We chose local Porto
+time, because that is when the trips happened. 157,929 trips (9\,\%) end up
+in a different time band than with UTC, but over all trips the share in
+each band changes by at most 1.1 percentage points.
+We also did not use TRIP\_ID as the primary key, even though the assignment
+calls it a unique identifier: it is not unique in the raw data, and a
+smaller key of our own saves space (see Part 1 -- Schema).
 
 \textbf{Invalid trips and GPS jumps.} We kept both and marked them instead
-of deleting them. This way query 7 can count the invalid trips, and the
-other queries can choose what to include. The downside is that every query
-has to state which trips it uses. For distances the difference turned out to
-be small, only 2--4\,\% in 4b.
+of deleting them. This way Q7 can count the invalid trips, and the other
+queries can choose what to include. The downside is that every query has to
+state which trips it uses. For distances the difference turned out to be
+small, only 1.5--4\,\% in Q4b.
 
 \textbf{The flags in the dataset are not reliable.} DAY\_TYPE is always ``A''
 and MISSING\_DATA marks only 10 trips, while about 38,000 trips clearly have
@@ -418,14 +492,22 @@ the top 20 are between 85 and 106 minutes. We still use the plain average
 as our main answer, since that is what the task asks for, and show the
 8-hour variant next to it in the output.
 
-\textbf{Limitations.} Query 6 only checks the GPS points, not the line
-between them, so a taxi that passes City Hall between two points 15 seconds
-apart can be missed.
+\textbf{Limitations.} Q6 only checks the GPS points, not the line between
+them. At 50\,km/h a taxi moves about 210\,m in 15\,s, which is more than the
+200\,m width of the circle, so a taxi can pass City Hall without any point
+inside it. We also compute the duration as 15\,s times the number of steps
+between points. If a jump is a gap in the signal rather than a bad point,
+the trip actually took longer, so its duration and end time are too short.
+This affects the 38,198 trips with a jump (2.2\,\%). We cannot correct these
+durations, but leaving the trips out changes the average durations in Q4b
+by at most 0.2 minutes and does not change the top taxi in Q5, so we do not
+expect the error to change our conclusions.
 
 \textbf{Pain points.} The main practical problem was the size of the data.
 To keep the load time and disk use down with 83 million GPS points, we
-bulk-loaded with \texttt{LOAD DATA}, turned off the binary log and kept
-\texttt{gps\_point} as narrow as possible.
+bulk-loaded with \texttt{LOAD DATA}, turned off the binary log and the
+foreign key checks during the load, and kept \texttt{gps\_point} as narrow
+as possible.
 
 \textbf{What we learned.} We learned that it pays off to explore the data
 properly before designing the schema. Both the duplicate IDs and the GPS
@@ -436,7 +518,13 @@ when a table has tens of millions of rows.
 % =====================================================================
 \section*{Feedback}
 
-We have no particular feedback on the assignment.
+\begin{itemize}
+  \item The dataset description does not match the data: TRIP\_ID is not
+        unique, DAYTYPE is ``A'' in every row, and MISSING\_DATA marks only
+        10 trips.
+  \item The time bands in Q4b and the midnight in Q8 depend on the
+        timezone, which the assignment does not specify.
+\end{itemize}
 
 % =====================================================================
 \section*{AI use}
@@ -451,21 +539,24 @@ control of the project. Based on these sources we used the AI to sketch out
 what we needed: the EDA checks, the cleaning rules, the schema, the loader and
 the ten queries. We then worked through that plan step by step.
 
-\textbf{Code.} The AI wrote the first versions of the EDA script, the schema,
-the loader and the query programs from our instructions. That first version
+\textbf{Code.} Working together, we had the AI write the first versions of
+the EDA script, the schema, the loader and the query programs from our
+instructions. That first version
 was a good start, but far from the final result. Both of us went back and
 forth with the AI, asked why things were done the way they were, and
 questioned several of the choices, for example how to handle duplicate trip
 IDs, whether to delete or keep the short trips, and which timezone to use.
-It took many rounds of critical review to get to what we hand in now, and
-because of that we feel we have control of the product.
+It took many rounds of critical review to reach the final version, and
+because of that we understand and can explain all the code we hand in, and
+can justify every design choice.
 
 \textbf{Checking the results.} We ran all the code ourselves and checked the
 answers by comparing the query results with the EDA and by looking at the
 data directly in the database.
 
-\textbf{Report.} The AI helped us draft and structure the report text. We
-went through it, rewrote parts of it and checked the numbers against the
-output. All interpretations and choices in the report are our own.
+\textbf{Report.} The AI helped us draft, structure and review the report
+text, and computed some of the supporting numbers from the data. We went
+through all of it, rewrote parts of it and checked every number against the
+output.
 
 \end{document}
