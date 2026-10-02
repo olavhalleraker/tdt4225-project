@@ -65,7 +65,7 @@ import time
 import zlib
 
 import matplotlib
-matplotlib.use("Agg")   # no pop-up windows, we only save PNG files
+matplotlib.use("Agg")   # no pop-up windows, we only save PDF files
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -570,7 +570,8 @@ def check_15_reference_counts(meta, stats):
 
 def save_figure(fig, name):
     fig.tight_layout()
-    fig.savefig(os.path.join(FIG_DIR, name), dpi=120)
+    # PDF keeps the plots as vector graphics, so they stay sharp in the report
+    fig.savefig(os.path.join(FIG_DIR, name))
     plt.close(fig)
     print("  saved %s/%s" % (FIG_DIR, name))
 
@@ -624,7 +625,7 @@ def make_figures(meta, stats, nrows):
                         "Trips per CALL_TYPE", figsize=(6, 4))
     for i, v in enumerate(counts.values):
         ax.text(i, v, "%d" % v, ha="center", va="bottom", fontsize=9)   # number on top of each bar
-    save_figure(fig, "metadata_call_type.png")
+    save_figure(fig, "metadata_call_type.pdf")
 
     per_taxi = meta["TAXI_ID"].value_counts()
     fig, ax = plt.subplots(figsize=(7, 4))
@@ -635,7 +636,7 @@ def make_figures(meta, stats, nrows):
     ax.set_xlabel("trips")
     ax.set_ylabel("number of taxis")
     ax.legend()
-    save_figure(fig, "metadata_trips_per_taxi.png")
+    save_figure(fig, "metadata_trips_per_taxi.pdf")
 
     # Same local Porto time as in check 8
     local = pd.to_datetime(meta["TIMESTAMP"].astype(int), unit="s", utc=True).dt.tz_convert("Europe/Lisbon")
@@ -645,7 +646,7 @@ def make_figures(meta, stats, nrows):
                         "Trips by start hour (Europe/Lisbon)")
     ax.set_xlabel("hour of day")
     ax.set_xticks(range(0, 24, 2))
-    save_figure(fig, "metadata_trips_by_hour.png")
+    save_figure(fig, "metadata_trips_by_hour.pdf")
 
     # Note: the last hour of 30 June UTC is already 1 July in Porto, so a
     # tiny "2014-07" bar shows up at the end
@@ -653,26 +654,26 @@ def make_figures(meta, stats, nrows):
     fig, ax = bar_chart(per_month.index, per_month.values,
                         "Trips by month (Europe/Lisbon)", figsize=(8, 4))
     ax.tick_params(axis="x", rotation=45)
-    save_figure(fig, "metadata_trips_by_month.png")
+    save_figure(fig, "metadata_trips_by_month.pdf")
 
     weekdays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
     per_weekday = local.dt.day_name().value_counts().reindex(weekdays)
     fig, ax = bar_chart([d[:3] for d in weekdays], per_weekday.values,
                         "Trips by weekday (Europe/Lisbon)", figsize=(6, 4))
-    save_figure(fig, "metadata_trips_by_weekday.png")
+    save_figure(fig, "metadata_trips_by_weekday.pdf")
 
     # --- POLYLINE ---
     n = stats["n_points"]
     valid = n >= 3
     histogram(n, 500, "GPS points per trip (all trips)", "points per trip",
-              "polyline_points_per_trip.png", log_y=True)
+              "polyline_points_per_trip.pdf", log_y=True)
     histogram((n[valid] - 1) * INTERVAL_S / 60, 120, "Trip duration (valid trips)",
-              "duration [min] = (points - 1) * 15 s", "polyline_duration.png")
+              "duration [min] = (points - 1) * 15 s", "polyline_duration.pdf")
     histogram(stats.loc[valid, "dist_km"], 50, "Trip distance (valid trips)",
-              "distance [km] (sum of haversine steps)", "polyline_distance.png")
+              "distance [km] (sum of haversine steps)", "polyline_distance.pdf")
     histogram(stats.loc[valid, "max_speed_kmh"], 400,
               "Top speed between two consecutive points (valid trips)",
-              "max step speed [km/h]", "polyline_max_speed.png", log_y=True)
+              "max step speed [km/h]", "polyline_max_speed.pdf", log_y=True)
 
     # Map: where in Porto are the GPS points? Each hexagon is coloured by
     # how many points fall inside it, so busy roads show up dark.
@@ -689,7 +690,7 @@ def make_figures(meta, stats, nrows):
     # north; this stretches the map so Porto isn't squashed sideways
     ax.set_aspect(1 / np.cos(np.radians(41.15)))
     fig.colorbar(hb, ax=ax, label="points (log)", shrink=0.7)
-    save_figure(fig, "polyline_map_hexbin.png")
+    save_figure(fig, "polyline_map_hexbin.pdf")
 
 
 CHECKS = [check_1_overview, check_2_trip_id_format, check_3_duplicate_trip_ids,
