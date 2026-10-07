@@ -1,49 +1,54 @@
-# TDT4225 Assignment 2 – Porto Taxi Trajectories (group 16)
+# TDT4225 Assignment 2 – Porto taxi trajectories in MySQL
 
-MySQL database and queries for the Porto Taxi Trajectory dataset.
-The report is `report/report.tex`, and it is the source of the PDF we hand in.
+Python programs that analyse, clean and load the Porto Taxi Trajectory dataset
+into MySQL 8.0.39, and answer the questions in Part 2. The report is
+`report/REPORT.md` (Markdown, with figures and screenshots in `report/`).
 
-## How to run
-
-1. **Data.** Put the dataset CSV in `data/porto.csv`. It is not in the repository, since it is too large.
-2. **Settings.** Copy `.env.example` to `.env` and fill in the passwords.
-3. **Database.** Start MySQL 8.0.39 in Docker:
-   ```
-   docker compose up -d
-   ```
-4. **Python.**
-   ```
-   python3 -m venv .venv
-   .venv/bin/pip install -r requirements.txt
-   ```
-5. **EDA** (Part 1):
-   ```
-   .venv/bin/python eda/eda.py              # all checks
-   .venv/bin/python eda/eda.py 3 13         # only check 3 and 13
-   .venv/bin/python eda/eda.py --figures    # save the plots to eda/figures/
-   ```
-6. **Create the tables and load the data** (Part 1). `create_tables.py` drops and recreates the tables.
-   ```
-   .venv/bin/python create_tables.py
-   .venv/bin/python insert_data.py
-   ```
-7. **Queries** (Part 2):
-   ```
-   .venv/bin/python queries/part2_q1_5.py       # tasks 1-5
-   .venv/bin/python queries/part2_q6_10.py      # tasks 6-10
-   .venv/bin/python queries/part2_q6_10.py 6    # only task 6
-   ```
-   The full result lists are written to `queries/output/`.
-
-## Files
+## Folder structure
 
 | Path | Content |
 |---|---|
-| `DbConnector.py` | Connection to MySQL, settings from `.env` |
-| `sql/schema.sql` | CREATE TABLE statements |
-| `create_tables.py` | Creates the tables from `sql/schema.sql` |
-| `insert_data.py` | Cleans the CSV and loads it into the database |
-| `eda/eda.py` | Exploratory data analysis, one numbered check per finding |
-| `queries/` | The Part 2 programs and their output |
-| `report/` | The report in LaTeX, synced with Overleaf |
-| `docs/` | Working notes (schema, results, report draft) |
+| `src/DbConnector.py` | MySQL connection (settings from environment variables) |
+| `src/cleaning.py` | Shared parsing and cleaning rules (used by both EDA and insert) |
+| `src/part1_eda.py` | Part 1.1 – exploratory data analysis, writes figures to `report/figures/` |
+| `src/part1_insert.py` | Part 1.2 – `CREATE TABLE` statements and insertion of the cleaned data |
+| `src/part2_queries.py` | Part 2 – one method per task (MySQL queries + Python where needed) |
+| `src/requirements.txt` | pip packages (the three given ones + matplotlib for the EDA figures) |
+| `output/` | Console output of the programs, and CSV files with the full answers of tasks 4a, 6, 8 and 9 |
+| `data/porto.csv` | The dataset, extracted from `assignment-data/porto.zip` (not handed in) |
+
+## Setup
+
+1. Start MySQL 8.0.39 in its own Docker container (port 3307, so it does not
+   collide with another MySQL server on 3306):
+
+   ```bash
+   docker run --name=tdt4225-a2-mysql -e MYSQL_ROOT_PASSWORD=<root-password> -e MYSQL_DATABASE=porto_db -e MYSQL_USER=tdt4225 -e MYSQL_PASSWORD=<password> -p 3307:3306 -d mysql:8.0.39 --innodb-buffer-pool-size=3G
+   ```
+
+2. Install the Python packages (Python 3.11 was used):
+
+   ```bash
+   python3.11 -m venv .venv && .venv/bin/pip install -r src/requirements.txt
+   ```
+
+3. Extract the data:
+
+   ```bash
+   mkdir -p data && unzip -j assignment-data/porto.zip porto/porto.csv -d data/
+   ```
+
+4. Give the programs the database password (and optionally `DB_HOST`,
+   `DB_PORT`, `DB_NAME`, `DB_USER`; defaults: localhost, 3307, porto_db, tdt4225):
+
+   ```bash
+   export DB_PASSWORD=<password>
+   ```
+
+## Run (from `src/`)
+
+```bash
+python part1_eda.py | tee ../output/part1_eda.txt
+python part1_insert.py | tee ../output/part1_insert.txt
+python part2_queries.py | tee ../output/part2_results.txt
+python ../report/render_screenshots.py
