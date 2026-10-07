@@ -1,0 +1,233 @@
+
+==============================================================================
+1. Overview
+==============================================================================
+----------------  ---------------------------------------------------------------------------------------------------
+File              data/porto.csv
+Size              1.94 GB
+Rows (trips)      1,710,670
+Columns           TRIP_ID, CALL_TYPE, ORIGIN_CALL, ORIGIN_STAND, TAXI_ID, TIMESTAMP, DAY_TYPE, MISSING_DATA, POLYLINE
+First trip start  2013-07-01 00:00:53
+Last trip start   2014-06-30 23:59:56
+----------------  ---------------------------------------------------------------------------------------------------
+
+==============================================================================
+2. Missing / empty values per column
+==============================================================================
+Column        Empty values    Share    Non-integer values
+------------  --------------  -------  --------------------
+TRIP_ID       0               0.00 %   0
+CALL_TYPE     0               0.00 %   -
+ORIGIN_CALL   1,345,900       78.68 %  0
+ORIGIN_STAND  904,091         52.85 %  0
+TAXI_ID       0               0.00 %   0
+TIMESTAMP     0               0.00 %   0
+DAY_TYPE      0               0.00 %   -
+MISSING_DATA  0               0.00 %   -
+POLYLINE      5,901           0.34 %   -
+(POLYLINE counts '[]', i.e. a trip without any GPS point, as empty.)
+
+==============================================================================
+3. TRIP_ID uniqueness
+==============================================================================
+---------------------------------------  ---------
+Unique TRIP_IDs                          1,710,589
+TRIP_IDs that occur more than once       80
+Extra (duplicate) rows                   81
+Duplicate groups that are exact copies   2
+Groups where POLYLINE differs            77
+Groups where CALL_TYPE differs           23
+Groups where ORIGIN_STAND differs        18
+Groups where ORIGIN_CALL differs         5
+Groups where TAXI_ID / TIMESTAMP differ  0
+---------------------------------------  ---------
+
+GPS points in the dropped copies: 0 points: 7, 1 points: 63, 2 points: 5, 3+ points: 6
+
+Examples (kept copy = the one with most GPS points):
+            TRIP_ID  CALL_TYPE    ORIGIN_CALL    ORIGIN_STAND      GPS points  Decision
+-------------------  -----------  -------------  --------------  ------------  ----------
+1372702836620000080  B            NULL           16                         2  dropped
+1372702836620000080  C            NULL           NULL                      54  kept
+1373025987620000601  A            2002           NULL                       0  dropped
+1373025987620000601  C            NULL           NULL                      37  kept
+1373210896620000598  B            NULL           57                         1  dropped
+1373210896620000598  C            NULL           NULL                      19  kept
+1373551710620000014  B            NULL           49                         2  dropped
+1373551710620000014  C            NULL           NULL                      67  kept
+
+==============================================================================
+4. CALL_TYPE and its relation to ORIGIN_CALL / ORIGIN_STAND
+==============================================================================
+CALL_TYPE    Trips    Share
+-----------  -------  -------
+A            364,770  21.3 %
+B            817,881  47.8 %
+C            528,019  30.9 %
+
+CALL_TYPE    ORIGIN_CALL set    ORIGIN_STAND set    Trips
+-----------  -----------------  ------------------  -------
+A            yes                no                  364,770
+B            no                 no                  11,302
+B            no                 yes                 806,579
+C            no                 no                  528,019
+-> ORIGIN_CALL is set exactly for type A. ORIGIN_STAND is never set for A/C,
+   but 11,302 type-B trips (1.4 % of B) have no ORIGIN_STAND (kept as NULL).
+
+==============================================================================
+5. DAY_TYPE
+==============================================================================
+DAY_TYPE    Trips
+----------  ---------
+A           1,710,670
+
+DAY_TYPE on Portuguese public holidays (should have been 'B'):
+Date        Holiday                   DAY_TYPE counts
+----------  ------------------------  -----------------
+2013-08-15  Assumption Day            {'A': 3753}
+2013-12-08  Immaculate Conception     {'A': 4904}
+2013-12-25  Christmas Day             {'A': 2185}
+2014-01-01  New Year's Day            {'A': 7493}
+2014-04-18  Good Friday               {'A': 4884}
+2014-04-25  Freedom Day               {'A': 4893}
+2014-05-01  Labour Day                {'A': 4682}
+2014-06-10  Portugal Day              {'A': 3757}
+2014-06-24  St. John (Porto holiday)  {'A': 6390}
+-> DAY_TYPE is 'A' for every trip, also on holidays, so the column carries no information.
+
+==============================================================================
+6. MISSING_DATA
+==============================================================================
+MISSING_DATA    Trips
+--------------  ---------
+False           1,710,660
+True            10
+
+Trips flagged with missing GPS points:
+            TRIP_ID  CALL_TYPE      TAXI_ID    GPS points
+-------------------  -----------  ---------  ------------
+1374554455620000625  B             20000625            43
+1375863510620000454  B             20000454             1
+1378544246620000057  B             20000057            11
+1381233613620000387  C             20000387           483
+1386346894620000904  C             20000904           285
+1387137779620000640  C             20000640            51
+1388351478620000678  A             20000678            27
+1390005983620000640  C             20000640            14
+1396631707620000163  C             20000163             1
+1399405185620000508  C             20000508            53
+
+==============================================================================
+7. TAXI_ID
+==============================================================================
+----------------------  -------
+Distinct taxis            448
+Trips per taxi: min         1
+Trips per taxi: median   3737
+Trips per taxi: mean     3818.5
+Trips per taxi: max     10746
+Taxis with < 100 trips     10
+----------------------  -------
+
+==============================================================================
+8. TIMESTAMP (start of trip)
+==============================================================================
+Month    Trips
+-------  -------
+2013-07  145,640
+2013-08  125,861
+2013-09  147,514
+2013-10  153,394
+2013-11  140,024
+2013-12  146,258
+2014-01  130,875
+2014-02  129,872
+2014-03  138,969
+2014-04  137,061
+2014-05  162,107
+2014-06  153,095
+
+Weekday    Trips
+---------  -------
+Mon        229,948
+Tue        234,734
+Wed        232,617
+Thu        247,025
+Fri        277,313
+Sat        258,636
+Sun        230,397
+
+==============================================================================
+9. POLYLINE - GPS points per trip (after removing duplicate rows)
+==============================================================================
+GPS points    Trips      Share
+------------  ---------  -------
+0 (empty)     5,894      0.34 %
+1             30,546     1.79 %
+2             7,389      0.43 %
+3-9           25,728     1.50 %
+10-49         1,012,155  59.17 %
+50-99         535,077    31.28 %
+100-499       91,729     5.36 %
+500-999       1,713      0.10 %
+>= 1000       358        0.02 %
+
+------------------------------------  ----------------
+Trips                                 1,710,589
+GPS points in total                   83,409,283
+Points per trip: median / mean / max  41 / 48.8 / 3881
+Invalid trips (< 3 GPS points)        43,829 (2.56 %)
+------------------------------------  ----------------
+
+==============================================================================
+10. GPS errors (cleaning rules, see cleaning.py)
+==============================================================================
+----------------------------------------------------------  ----------------
+Points outside the region (lat 36.9..43.8, lon -9.6..-6.0)  35
+Points removed by the start/speed rules (> 200 km/h jump)   77,236
+Points removed in total                                     77,271 (0.093 %)
+Points kept                                                 83,332,012
+Trips with at least one removed point                       38,230
+Trips that lost more than half of their points              123
+Valid trips with < 3 points left after cleaning             400
+----------------------------------------------------------  ----------------
+
+Speed between consecutive raw GPS points (15 s apart):
+Speed         Segments    Share
+------------  ----------  --------
+0-49 km/h     68,163,127  83.426 %
+50-99 km/h    11,282,737  13.809 %
+100-149 km/h  2,035,663   2.491 %
+150-199 km/h  176,076     0.216 %
+>= 200 km/h   46,985      0.058 %
+
+==============================================================================
+11. Duration and distance of valid trips (>= 3 GPS points)
+==============================================================================
+        Duration (min)    Distance (km)
+----  ----------------  ---------------
+p1                 1.5             0.33
+p25                7               2.47
+p50               10.2             4.01
+p75               14.5             6.62
+p99               47.5            23.96
+max              970             751.59
+mean              12.3             5.6
+
+-----------------------------------------  -----
+Trips longer than 2 hours                  2,257
+Trips longer than 6 hours                  135
+Trips that moved less than 100 m in total  9,074
+-----------------------------------------  -----
+
+==============================================================================
+12. Overlapping trips of the same taxi
+==============================================================================
+---------------------------------------------------------  ---------
+Consecutive trip pairs (same taxi)                         1,666,318
+Pairs where the next trip starts before the previous ends  792
+Median overlap (s)                                         26.0
+90th percentile overlap (s)                                93.0
+---------------------------------------------------------  ---------
+
+Figures written to report/figures/
