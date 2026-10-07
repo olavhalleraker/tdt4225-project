@@ -1,0 +1,71 @@
+Connected to: 8.0.39
+You are connected to the database: ('porto_db',)
+-----------------------------------------------
+
+Created tables taxi, trip and gps_point
+Inserted 448 taxis
+     100000 trips inserted (43 s)
+     200000 trips inserted (84 s)
+     300000 trips inserted (124 s)
+     400000 trips inserted (165 s)
+     500000 trips inserted (209 s)
+     600000 trips inserted (255 s)
+     700000 trips inserted (297 s)
+     800000 trips inserted (341 s)
+     900000 trips inserted (383 s)
+    1000000 trips inserted (426 s)
+    1100000 trips inserted (468 s)
+    1200000 trips inserted (511 s)
+    1300000 trips inserted (554 s)
+    1400000 trips inserted (595 s)
+    1500000 trips inserted (638 s)
+    1600000 trips inserted (681 s)
+    1700000 trips inserted (724 s)
+
+Insert finished in 12.1 minutes
+Step                                 Count
+-----------------------------------  ----------
+CSV rows                             1,710,670
+Duplicate rows skipped               81
+Trips inserted                       1,710,589
+GPS points in inserted trips         83,409,283
+GPS points inserted                  83,332,012
+Points outside region (removed)      35
+Points removed by start/speed rules  77,236
+
+Rows per table:
+Table      Rows
+---------  ----------
+taxi       448
+trip       1,710,589
+gps_point  83,332,012
+
+SELECT trip_id, taxi_id, call_type, origin_call, origin_stand, day_type, missing_data, start_time, end_time FROM trip LIMIT 5:
+trip_id              taxi_id    call_type    origin_call    origin_stand    day_type    missing_data    start_time           end_time
+-------------------  ---------  -----------  -------------  --------------  ----------  --------------  -------------------  -------------------
+1372636853620000380  20000380   C                                           A           0               2013-07-01 00:00:53  2013-07-01 00:06:53
+1372636854620000520  20000520   C                                           A           0               2013-07-01 00:00:54  2013-07-01 00:11:24
+1372636858620000589  20000589   C                                           A           0               2013-07-01 00:00:58  2013-07-01 00:06:28
+1372636875620000233  20000233   C                                           A           0               2013-07-01 00:01:15  2013-07-01 00:06:30
+1372636896620000360  20000360   C                                           A           0               2013-07-01 00:01:36  2013-07-01 00:12:06
+
+SELECT trip_id, duration_s, n_points_raw, n_points_clean, is_valid, distance_km, start_lat, start_lon, end_lat, end_lon FROM trip LIMIT 5:
+trip_id              duration_s    n_points_raw    n_points_clean    is_valid    distance_km         start_lat    start_lon    end_lat    end_lon
+-------------------  ------------  --------------  ----------------  ----------  ------------------  -----------  -----------  ---------  ---------
+1372636853620000380  360           25              25                1           2.0126495087449223  41.140746    -8.610291    41.145345  -8.605890
+1372636854620000520  630           43              39                1           7.248476933422172   41.151951    -8.574678    41.142915  -8.607996
+1372636858620000589  330           23              23                1           2.6510520754856137  41.141412    -8.618643    41.154489  -8.630838
+1372636875620000233  315           22              22                1           2.2362960148171394  41.148009    -8.619894    41.157351  -8.609490
+1372636896620000360  630           43              41                1           5.051409639409595   41.146137    -8.617599    41.169141  -8.636625
+
+SELECT * FROM gps_point LIMIT 5:
+trip_id              point_index    latitude    longitude
+-------------------  -------------  ----------  -----------
+1372636853620000380  0              41.140746   -8.610291
+1372636853620000380  1              41.140755   -8.610300
+1372636853620000380  2              41.140890   -8.610309
+1372636853620000380  3              41.141358   -8.613657
+1372636853620000380  4              41.141484   -8.614602
+
+-----------------------------------------------
+Connection to 8.0.39 is closed
