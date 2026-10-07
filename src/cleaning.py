@@ -1,9 +1,6 @@
 """
-Shared parsing and cleaning rules for the Porto taxi dataset.
+Shared parsing and cleaning rules.
 
-Both part1_eda.py (which reports how much data each rule affects) and
-part1_insert.py (which cleans the data before inserting it) use this module,
-so the numbers in the EDA are exactly what ends up in MySQL.
 """
 import csv
 import json
@@ -84,10 +81,8 @@ def parse_timestamp(unix_seconds):
     """Unix time -> naive datetime.
 
     The values are converted as UTC. When read this way the dataset starts at
-    2013-07-01 00:00 and ends at 2014-06-30 23:59, i.e. exactly at midnight
-    boundaries, which shows that the timestamps already represent Porto's
-    local wall-clock time. Converting with a Lisbon time zone would shift
-    every trip by one hour during summer time."""
+    2013-07-01 00:00 and ends at 2014-06-30 23:59,
+    """
     return datetime.fromtimestamp(int(unix_seconds), tz=timezone.utc).replace(tzinfo=None)
 
 
