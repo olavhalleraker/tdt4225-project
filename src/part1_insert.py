@@ -1,13 +1,6 @@
 """
 Part 1.2 - Create the tables and insert the cleaned Porto data into MySQL.
 
-Cleaning (see cleaning.py and the report):
-  * duplicate TRIP_IDs: only the copy with the most GPS points is kept
-  * empty ORIGIN_CALL / ORIGIN_STAND        -> NULL
-  * trips without GPS points               -> kept, with NULL duration/end/distance
-  * GPS errors (outside region, impossible jumps) -> those points are not stored
-  * TIMESTAMP (Unix time)                  -> DATETIME start_time / end_time
-
 Run:  python part1_insert.py | tee ../output/part1_insert.txt
 """
 import time

@@ -1,10 +1,6 @@
 """
 Part 1.1 - Exploratory data analysis (EDA) of the Porto taxi dataset.
 
-The CSV file (~1.9 GB) is streamed row by row, so it is never loaded into
-memory as a whole. Statistics for every column are printed with tabulate,
-and figures are written to report/figures/.
-
 Run:  python part1_eda.py | tee ../output/part1_eda.txt
 """
 import os
