@@ -24,19 +24,13 @@ into MySQL 8.0.39, and answer the questions in Part 2.
    docker run --name=tdt4225-a2-mysql -e MYSQL_ROOT_PASSWORD=<root-password> -e MYSQL_DATABASE=porto_db -e MYSQL_USER=tdt4225 -e MYSQL_PASSWORD=<password> -p 3307:3306 -d mysql:8.0.39 --innodb-buffer-pool-size=3G
    ```
 
-2. Install the Python packages (Python 3.11 was used):
+2. Install the Python packages:
 
    ```bash
    python3.11 -m venv .venv && .venv/bin/pip install -r src/requirements.txt
    ```
 
-3. Extract the data:
-
-   ```bash
-   mkdir -p data && unzip -j assignment-data/porto.zip porto/porto.csv -d data/
-   ```
-
-4. Give the programs the database password (and optionally `DB_HOST`,
+3. Give the programs the database password (and optionally `DB_HOST`,
    `DB_PORT`, `DB_NAME`, `DB_USER`; defaults: localhost, 3307, porto_db, tdt4225):
 
    ```bash
@@ -49,4 +43,3 @@ into MySQL 8.0.39, and answer the questions in Part 2.
 python part1_eda.py | tee ../output/part1_eda.txt
 python part1_insert.py | tee ../output/part1_insert.txt
 python part2_queries.py | tee ../output/part2_results.txt
-python ../report/render_screenshots.py
