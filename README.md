@@ -11,8 +11,8 @@ into MySQL 8.0.39, and answer the questions in Part 2.
 | `src/cleaning.py` | Shared parsing and cleaning rules (used by both EDA and insert) |
 | `src/part1_eda.py` | Part 1.1 – exploratory data analysis, writes figures to `report/figures/` |
 | `src/part1_insert.py` | Part 1.2 – `CREATE TABLE` statements and insertion of the cleaned data |
-| `src/part2_queries.py` | Part 2 – one method per task (MySQL queries + Python where needed) |
-| `src/requirements.txt` | pip packages (the three given ones + matplotlib for the EDA figures) |
+| `src/part2_queries.py` | Part 2 – one method per task (MySQL queries + Python) |
+| `src/requirements.txt` | pip packages |
 | `output/` | Console output of the programs, and CSV files with the full answers of tasks 4a, 6, 8 and 9 |
 | `data/porto.csv` | The dataset.
 
