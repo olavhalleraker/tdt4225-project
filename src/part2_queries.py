@@ -1,16 +1,7 @@
 """
-Part 2 - Answer the ten questions with MySQL queries (and Python where needed).
+Part 2 - Answer the ten questions with MySQL queries and Python.
 
-Definitions used throughout (see the report):
-  * A trip is valid if its POLYLINE has at least 3 GPS points (task 7).
-    Counting questions (tasks 1-3, 4a, 7) use all trips; questions about
-    duration, distance, location and time (tasks 4b, 5, 6, 8-10) use valid
-    trips only, because trips with 0-2 points have no meaningful trajectory.
-  * duration = (GPS points - 1) * 15 s, end_time = start_time + duration.
-  * distance = sum of haversine distances between consecutive cleaned points.
-
-Long answers (one row per taxi or per trip) are also written as CSV files
-to output/, and the console shows the count and the first rows.
+For definitions used throughout, see the report.
 
 Run:  python part2_queries.py | tee ../output/part2_results.txt
 """
