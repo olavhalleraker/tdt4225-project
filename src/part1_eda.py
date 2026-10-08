@@ -66,7 +66,7 @@ class EDA:
         self.non_numeric = Counter()      # column -> values that are not integers
         self.trips_per_taxi = Counter()
         self.trips_per_month = Counter()
-        self.trips_per_hour = defaultdict(Counter)  # call type -> hour -> trips
+        self.trips_per_hour = defaultdict(Counter)  # call type -> Porto hour -> trips
         self.trips_per_weekday = Counter()
         self.first_ts = None
         self.last_ts = None
@@ -124,7 +124,7 @@ class EDA:
         self.first_ts = min(self.first_ts or start, start)
         self.last_ts = max(self.last_ts or start, start)
         self.trips_per_month[start.strftime("%Y-%m")] += 1
-        self.trips_per_hour[call_type][start.hour] += 1
+        self.trips_per_hour[call_type][cleaning.to_porto_time(start).hour] += 1
         self.trips_per_weekday[start.strftime("%a")] += 1
         if start.date() in HOLIDAYS:
             self.day_type_holidays[start.date()][day_type] += 1
@@ -352,7 +352,7 @@ class EDA:
                    color=COLORS[ct], label={"A": "A - dispatched", "B": "B - taxi stand",
                                             "C": "C - street"}[ct])
         ax.set_xticks(range(24))
-        ax.set_xlabel("Start hour")
+        ax.set_xlabel("Start hour (Porto time)")
         ax.set_ylabel("Share of the call type's trips (%)")
         ax.set_title("Trips by start hour and call type")
         ax.set_ylim(0, 8.5)

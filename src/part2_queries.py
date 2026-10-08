@@ -23,6 +23,10 @@ OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "..", "output")
 CITY_HALL = (41.15794, -8.62911)  # (latitude, longitude) of Porto City Hall
 EARTH_RADIUS_KM = 6371.0088       # the mean radius used by the haversine package
 
+# Times are stored in UTC. Questions about clock time or calendar day (tasks 4b
+# and 8) convert them to Porto time, which is UTC+1 in summer time.
+PORTO_TZ = "Europe/Lisbon"
+
 
 def print_table(rows, headers):
     """Print rows with tabulate: counts get thousands separators, decimals two
@@ -36,6 +40,7 @@ def print_table(rows, headers):
 
 
 def save_csv(filename, headers, rows):
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
     path = os.path.join(OUTPUT_DIR, filename)
     with open(path, "w", newline="") as f:
         writer = csv.writer(f)
@@ -50,6 +55,9 @@ class PortoQueries:
         self.connection = DbConnector()
         self.db_connection = self.connection.db_connection
         self.cursor = self.connection.cursor
+        # CONVERT_TZ returns NULL when MySQL has no time zone tables
+        if self.query("SELECT CONVERT_TZ('2013-07-01', '+00:00', %s)", (PORTO_TZ,))[0][0] is None:
+            raise RuntimeError("MySQL has no time zone tables (load them with mysql_tzinfo_to_sql)")
 
     def query(self, sql, params=None):
         self.cursor.execute(sql, params)
@@ -122,21 +130,24 @@ class PortoQueries:
 
     def task4b(self):
         """For each call type: average duration and distance, and the share of
-        trips starting in the time bands 00-06, 06-12, 12-18 and 18-24."""
+        trips starting in the time bands 00-06, 06-12, 12-18 and 18-24 (Porto time)."""
         rows = self.query("""
             SELECT call_type,
                    COUNT(*)                                       AS trips,
                    AVG(duration_s) / 60                           AS avg_duration_min,
                    AVG(distance_km)                               AS avg_distance_km,
-                   100 * AVG(HOUR(start_time) BETWEEN 0 AND 5)    AS pct_00_06,
-                   100 * AVG(HOUR(start_time) BETWEEN 6 AND 11)   AS pct_06_12,
-                   100 * AVG(HOUR(start_time) BETWEEN 12 AND 17)  AS pct_12_18,
-                   100 * AVG(HOUR(start_time) BETWEEN 18 AND 23)  AS pct_18_24
-            FROM trip
-            WHERE is_valid
+                   100 * AVG(HOUR(start_porto) BETWEEN 0 AND 5)   AS pct_00_06,
+                   100 * AVG(HOUR(start_porto) BETWEEN 6 AND 11)  AS pct_06_12,
+                   100 * AVG(HOUR(start_porto) BETWEEN 12 AND 17) AS pct_12_18,
+                   100 * AVG(HOUR(start_porto) BETWEEN 18 AND 23) AS pct_18_24
+            FROM (SELECT call_type, duration_s, distance_km,
+                         CONVERT_TZ(start_time, '+00:00', %s) AS start_porto
+                  FROM trip
+                  WHERE is_valid) AS valid_trip
             GROUP BY call_type
             ORDER BY call_type
-        """)
+        """, (PORTO_TZ,))
+        print("Time bands use the start time in Porto time.")
         print_table(rows, self.cursor.column_names)
 
     def task5(self):
@@ -213,16 +224,24 @@ class PortoQueries:
               .format(after_cleaning))
 
     def task8(self):
-        """Trips that started on one calendar day and ended on the next."""
+        """Trips that started on one calendar day and ended on the next, using
+        the Porto calendar day."""
         rows = self.query("""
-            SELECT trip_id, taxi_id, call_type, start_time, end_time, duration_s / 60 AS duration_min
-            FROM trip
-            WHERE is_valid
-              AND DATE(end_time) = DATE(start_time) + INTERVAL 1 DAY
-            ORDER BY start_time
-        """)
+            WITH porto AS (
+                SELECT trip_id, taxi_id, call_type, duration_s,
+                       CONVERT_TZ(start_time, '+00:00', %s) AS start_time_porto,
+                       CONVERT_TZ(end_time, '+00:00', %s)   AS end_time_porto
+                FROM trip
+                WHERE is_valid
+            )
+            SELECT trip_id, taxi_id, call_type, start_time_porto, end_time_porto,
+                   duration_s / 60 AS duration_min
+            FROM porto
+            WHERE DATE(end_time_porto) = DATE(start_time_porto) + INTERVAL 1 DAY
+            ORDER BY start_time_porto
+        """, (PORTO_TZ, PORTO_TZ))
         headers = list(self.cursor.column_names)
-        print("Midnight-crossing trips: {:,}\n".format(len(rows)))
+        print("Midnight-crossing trips (Porto time): {:,}\n".format(len(rows)))
         print("First 20:")
         print_table(rows[:20], headers)
         save_csv("task8_midnight_crossers.csv", headers, rows)

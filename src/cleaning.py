@@ -6,6 +6,7 @@ import csv
 import json
 import os
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 
 from haversine import haversine
 
@@ -28,6 +29,9 @@ MAX_SPEED_KMH = 200
 # A trip may start with a few stale positions (the GPS still reporting an old
 # location for up to a minute) before jumping to where the taxi really is.
 MAX_STALE_START_POINTS = 4
+
+# Times are stored in UTC; Porto is UTC+0 in winter and UTC+1 in summer time.
+PORTO_TZ = ZoneInfo("Europe/Lisbon")
 
 # Area the taxis can realistically drive in: mainland Portugal plus Galicia.
 # Points outside it (e.g. in the Atlantic or in France) are GPS errors.
@@ -78,12 +82,18 @@ def parse_polyline(polyline_text):
 
 
 def parse_timestamp(unix_seconds):
-    """Unix time -> naive datetime.
+    """Unix time -> naive datetime in UTC.
 
-    The values are converted as UTC. When read this way the dataset starts at
-    2013-07-01 00:00 and ends at 2014-06-30 23:59,
+    Unix time counts from 1970-01-01 00:00 UTC, so the values are converted as
+    UTC and stored that way. Read as UTC, the dataset starts at 2013-07-01 00:00
+    and ends at 2014-06-30 23:59. Use to_porto_time() for Porto clock time.
     """
     return datetime.fromtimestamp(int(unix_seconds), tz=timezone.utc).replace(tzinfo=None)
+
+
+def to_porto_time(utc_time):
+    """Naive UTC datetime -> naive Porto clock time (one hour later in summer time)."""
+    return utc_time.replace(tzinfo=timezone.utc).astimezone(PORTO_TZ).replace(tzinfo=None)
 
 
 def in_region(lat, lon):
