@@ -1,8 +1,7 @@
 # TDT4225 Assignment 2 – Porto taxi trajectories in MySQL
 
 Python programs that analyse, clean and load the Porto Taxi Trajectory dataset
-into MySQL 8.0.39, and answer the questions in Part 2. The report is
-`report/REPORT.md` (Markdown, with figures and screenshots in `report/`).
+into MySQL 8.0.39, and answer the questions in Part 2. 
 
 ## Folder structure
 
@@ -15,12 +14,11 @@ into MySQL 8.0.39, and answer the questions in Part 2. The report is
 | `src/part2_queries.py` | Part 2 – one method per task (MySQL queries + Python where needed) |
 | `src/requirements.txt` | pip packages (the three given ones + matplotlib for the EDA figures) |
 | `output/` | Console output of the programs, and CSV files with the full answers of tasks 4a, 6, 8 and 9 |
-| `data/porto.csv` | The dataset, extracted from `assignment-data/porto.zip` (not handed in) |
+| `data/porto.csv` | The dataset.
 
 ## Setup
 
-1. Start MySQL 8.0.39 in its own Docker container (port 3307, so it does not
-   collide with another MySQL server on 3306):
+1. Start MySQL 8.0.39 in its own Docker container:
 
    ```bash
    docker run --name=tdt4225-a2-mysql -e MYSQL_ROOT_PASSWORD=<root-password> -e MYSQL_DATABASE=porto_db -e MYSQL_USER=tdt4225 -e MYSQL_PASSWORD=<password> -p 3307:3306 -d mysql:8.0.39 --innodb-buffer-pool-size=3G
