@@ -14,7 +14,7 @@ into MySQL 8.0.39, and answer the questions in Part 2.
 | `src/part2_queries.py` | Part 2 – one method per task (MySQL queries + Python) |
 | `src/requirements.txt` | pip packages |
 | `output/` | Console output of the programs, and CSV files with the full answers of tasks 4a, 6, 8 and 9 |
-| `data/porto.csv` | The dataset.
+| `data/porto.csv` | The dataset, extracted from `porto.zip` (not included in Git) |
 
 ## Setup
 
@@ -30,7 +30,13 @@ into MySQL 8.0.39, and answer the questions in Part 2.
    python3.11 -m venv .venv && .venv/bin/pip install -r src/requirements.txt
    ```
 
-3. Give the programs the database password (and optionally `DB_HOST`,
+3. Extract the dataset from the supplied `porto.zip` to `data/porto.csv`:
+
+   ```bash
+   mkdir -p data && unzip -j <path-to>/porto.zip porto/porto.csv -d data/
+   ```
+
+4. Give the programs the database password (and optionally `DB_HOST`,
    `DB_PORT`, `DB_NAME`, `DB_USER`; defaults: localhost, 3307, porto_db, tdt4225):
 
    ```bash
@@ -43,3 +49,4 @@ into MySQL 8.0.39, and answer the questions in Part 2.
 python part1_eda.py | tee ../output/part1_eda.txt
 python part1_insert.py | tee ../output/part1_insert.txt
 python part2_queries.py | tee ../output/part2_results.txt
+```
